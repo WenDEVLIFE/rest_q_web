@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "mock-api-key",
@@ -12,6 +13,7 @@ const firebaseConfig = {
 
 // Initialize Firebase for SSR/CSR safely
 let auth: any;
+let db: any;
 
 try {
   if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
@@ -19,10 +21,13 @@ try {
   }
   const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
   auth = getAuth(app);
+  db = getFirestore(app);
 } catch (error) {
   console.error("Firebase Initialization Error:", error);
-  // Fallback to a minimal mock if initialization fails completely
+  // Fallback to minimal mocks if initialization fails
   auth = { currentUser: null };
+  db = {}; 
 }
 
-export { auth };
+export { auth, db };
+

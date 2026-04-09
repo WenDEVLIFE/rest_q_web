@@ -1,58 +1,72 @@
+"use client";
+
+import { useState } from "react";
 import { LoginForm } from "../../components/Auth/LoginForm";
+import { RegisterForm } from "../../components/Auth/RegisterForm";
 import { Activity } from "lucide-react";
-import Image from "next/image";
 
 export default function LoginPage() {
+  const [isRegistering, setIsRegistering] = useState(false);
+
   return (
-    <div className="flex min-h-screen bg-white font-sans text-slate-900 overflow-hidden">
-      {/* Left Side: Hero Image (Hidden on small screens) */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-        {/* Real Hero Image */}
-        <Image
-          src="/login-hero.png"
-          alt="Emergency Response Scene"
-          fill
-          priority
-          className="object-cover brightness-[0.85]"
-        />
-
-        {/* Logo Overlay */}
-        <div className="relative z-10 flex items-center gap-3 p-12 w-full">
-          <div className="p-2.5 bg-primary/90 backdrop-blur-md rounded-xl text-white shadow-xl">
-            <Activity className="w-8 h-8" />
+    <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden items-center justify-center p-4">
+      {/* Centered Auth Card */}
+      <div className="w-full max-w-[400px] flex flex-col items-center">
+        {/* Branding Header */}
+        <div className="flex flex-col items-center gap-4 mb-8 animate-in fade-in slide-in-from-top-4 duration-700">
+          <div className="p-3 bg-primary rounded-2xl text-white shadow-xl shadow-primary/20">
+            <Activity className="w-10 h-10" />
           </div>
-          <span className="text-2xl font-black tracking-tighter text-white drop-shadow-md">
-            Res-Q
-          </span>
+          <div className="flex flex-col items-center">
+            <h1 className="text-3xl font-black tracking-tighter">Res-Q</h1>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+              Emergency Response System
+            </p>
+          </div>
         </div>
 
-        {/* Bottom Overlay Info */}
-        <div className="absolute bottom-12 left-12 z-10 text-xs font-bold text-white/80 uppercase tracking-widest drop-shadow-sm">
-          Res-Q Emergency Systems © 2026
-        </div>
-
-        {/* Subtle Gradient Overlay for depth */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-black/10 pointer-events-none" />
-      </div>
-
-      {/* Right Side: Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 relative">
-        <div className="lg:hidden absolute top-8 left-8 flex items-center gap-2">
-          <Activity className="w-6 h-6 text-primary" />
-          <span className="text-xl font-bold tracking-tight">Res-Q</span>
-        </div>
-
-        <div className="w-full max-w-md space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <div className="text-center lg:text-left space-y-2">
-            <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Welcome to Res-Q</h2>
-            <p className="text-slate-500 font-medium">Please sign in to register the incident.</p>
+        {/* Form Container */}
+        <div className="w-full bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
+          <div className="text-center space-y-2 mb-8">
+            <h2 className="text-2xl font-black tracking-tight text-slate-900">
+              {isRegistering ? "Create an Account" : "Access Console"}
+            </h2>
+            <p className="text-sm text-slate-500 font-medium leading-relaxed px-4">
+              {isRegistering
+                ? "Join the emergency response network to register and track incidents."
+                : "Enter your credentials to access the mission-critical dispatch center."}
+            </p>
           </div>
 
-          <LoginForm />
+          {isRegistering ? (
+            <RegisterForm />
+          ) : (
+            <LoginForm />
+          )}
+
+          <div className="text-center pt-6 border-t border-slate-100 mt-6">
+            <button
+              onClick={() => setIsRegistering(!isRegistering)}
+              className="text-sm font-bold text-primary hover:text-primary/80 transition-all underline underline-offset-4"
+            >
+              {isRegistering
+                ? "Already have an account? Sign in"
+                : "Don't have an account? Sign Up"}
+            </button>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-8 text-center">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
+            Res-Q Emergency Systems © 2026
+          </p>
         </div>
       </div>
     </div>
   );
 }
+
+
 
 

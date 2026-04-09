@@ -86,12 +86,6 @@ export const LoginForm = () => {
         Sign In
       </Button>
 
-      <p className="text-center text-sm text-slate-500">
-        Don't have an account?{" "}
-        <button type="button" className="font-bold text-primary hover:underline">
-          Sign Up
-        </button>
-      </p>
     </form>
   );
 };
