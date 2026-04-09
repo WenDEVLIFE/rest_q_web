@@ -8,6 +8,7 @@ import { LoginHandler } from '../../src/agents/UserAgent/LoginHandler';
 import { formatAuthError, isValidEmail } from '../../src/utils/authentication';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { APP_ROUTES } from '../../src/constants/routes';
 
 export const LoginForm = () => {
   const router = useRouter();
@@ -32,12 +33,17 @@ export const LoginForm = () => {
     setIsLoading(true);
 
     try {
-      await LoginHandler.login(email, password);
+      const userCredential = await LoginHandler.login(email, password);
+      const profile = await LoginHandler.getUserProfile(userCredential.user.uid);
+      
       toast.success("Sign-in successful. Redirecting...");
+      
+      const redirectPath = profile?.role === 'admin' ? APP_ROUTES.ADMIN.DASHBOARD : APP_ROUTES.HOME;
+      
       // Redirect to dashboard after a short delay
       setTimeout(() => {
-        router.push('/');
-      }, 1000);
+        router.push(redirectPath);
+      }, 800);
     } catch (err: any) {
       console.error("Login Error:", err);
       toast.error(formatAuthError(err.code));
