@@ -7,10 +7,9 @@ import {
   Clock, 
   CheckCircle2, 
   Trash2, 
-  ExternalLink,
   MoreVertical
 } from 'lucide-react';
-import { Incident } from '../../src/agents/AdminDashboardAgent/AdminHandler';
+import { Incident } from '../../src/types/incident';
 
 interface IncidentRowProps {
   incident: Incident;
@@ -23,6 +22,8 @@ export const IncidentRow = ({ incident, onVerify, onRemove }: IncidentRowProps) 
     accident: 'bg-red-50 text-red-700 border-red-100',
     closure: 'bg-amber-50 text-amber-700 border-amber-100',
     hazard: 'bg-amber-50 text-amber-700 border-amber-100',
+    fire: 'bg-red-50 text-red-700 border-red-100',
+    health: 'bg-rose-50 text-rose-700 border-rose-100',
     other: 'bg-slate-50 text-slate-700 border-slate-100',
   };
 
