@@ -5,6 +5,7 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   error?: string;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  helperText?: string;
 }
 
 export const Input = ({
@@ -12,6 +13,7 @@ export const Input = ({
   error,
   leftIcon,
   rightIcon,
+  helperText,
   className = '',
   ...props
 }: InputProps) => {
@@ -48,6 +50,11 @@ export const Input = ({
       {error && (
         <p className="text-[11px] font-bold text-emergency ml-1 mt-0.5">
           {error}
+        </p>
+      )}
+      {!error && helperText && (
+        <p className="text-[10px] font-bold text-slate-400 ml-1 mt-0.5 italic">
+          {helperText}
         </p>
       )}
     </div>

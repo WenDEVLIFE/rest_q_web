@@ -5,7 +5,8 @@ import {
   sendPasswordResetEmail,
   UserCredential
 } from "firebase/auth";
-import { auth } from "../../data/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "../../data/firebase";
 
 /**
  * UserAgent: LoginHandler
@@ -24,6 +25,20 @@ export class LoginHandler {
       return await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
       throw error;
+    }
+  }
+
+  /**
+   * Fetches the user profile from Firestore
+   */
+  static async getUserProfile(uid: string) {
+    try {
+      const docRef = doc(db, "users", uid);
+      const docSnap = await getDoc(docRef);
+      return docSnap.exists() ? docSnap.data() : null;
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      return null;
     }
   }
 
