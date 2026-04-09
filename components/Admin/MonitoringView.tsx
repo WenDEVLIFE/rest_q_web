@@ -1,16 +1,16 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { 
   Search, 
-  Filter, 
   RefreshCw, 
   AlertCircle,
   ShieldAlert,
   SlidersHorizontal
 } from 'lucide-react';
 import { IncidentRow } from './IncidentRow';
-import { AdminHandler, Incident } from '../../src/agents/AdminDashboardAgent/AdminHandler';
+import { AdminHandler } from '../../src/agents/AdminDashboardAgent/AdminHandler';
+import { Incident } from '../../src/types/incident';
 import { toast } from 'sonner';
 import { AlertDialog } from '../UI/AlertDialog';
 
@@ -19,6 +19,7 @@ export const MonitoringView = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const knownIncidentIdsRef = useRef<Set<string>>(new Set());
   
   // Dialog State
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -30,6 +31,7 @@ export const MonitoringView = () => {
     try {
       const data = await AdminHandler.getIncidents();
       setIncidents(data);
+      knownIncidentIdsRef.current = new Set(data.map((item) => item.id));
     } catch (err) {
       toast.error("Failed to sync latest reports.");
     } finally {
@@ -39,7 +41,37 @@ export const MonitoringView = () => {
   };
 
   useEffect(() => {
+    const unsubscribe = AdminHandler.subscribeToIncidents(
+      (data) => {
+        if (knownIncidentIdsRef.current.size > 0) {
+          const freshPendingCount = data.filter(
+            (item) => item.status === 'pending' && !knownIncidentIdsRef.current.has(item.id)
+          ).length;
+
+          if (freshPendingCount > 0) {
+            toast.info(
+              freshPendingCount === 1
+                ? 'New incident report received.'
+                : `${freshPendingCount} new incident reports received.`
+            );
+          }
+        }
+
+        setIncidents(data);
+        knownIncidentIdsRef.current = new Set(data.map((item) => item.id));
+        setIsLoading(false);
+        setIsRefreshing(false);
+      },
+      () => {
+        toast.error('Real-time monitoring connection failed.');
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    );
+
     fetchIncidents();
+
+    return () => unsubscribe();
   }, []);
 
   const handleVerify = async (id: string) => {
