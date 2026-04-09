@@ -16,18 +16,28 @@ import {
 } from 'lucide-react';
 import { Button } from '../UI/Button';
 import { toast } from 'sonner';
+import { Incident } from '../../src/types/incident';
+
+export interface IncidentReportPayload {
+  type: string;
+  description: string;
+  riskData: { risk: 'High' | 'Low'; time: number } | null;
+}
 
 interface IncidentReporterProps {
   onClose: () => void;
-  onReport: (data: any) => void;
+  onReport: (data: IncidentReportPayload) => Promise<boolean | void> | boolean | void;
   reportPin?: { lat: number; lng: number } | null;
+  reportedIncidents?: Incident[];
 }
 
-export const IncidentReporter = ({ onClose, onReport, reportPin }: IncidentReporterProps) => {
+export const IncidentReporter = ({ onClose, onReport, reportPin, reportedIncidents }: IncidentReporterProps) => {
   // 0: Feed, 1: Select Type, 2: Pinpoint & Details
   const [step, setStep] = useState<0 | 1 | 2>(0); 
   const [type, setType] = useState<string | null>(null);
   const [riskData, setRiskData] = useState<{ risk: 'High' | 'Low', time: number } | null>(null);
+  const [description, setDescription] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const incidentTypes = [
     { id: 'accident', label: 'Vehicle Accident', desc: 'Car crashes, pile-ups', icon: <Car className="w-6 h-6" />, color: 'bg-orange-500 shadow-orange-500/20' },
@@ -36,12 +46,23 @@ export const IncidentReporter = ({ onClose, onReport, reportPin }: IncidentRepor
     { id: 'hazard', label: 'Road Hazard', desc: 'Floods, debris, blocks', icon: <AlertTriangle className="w-6 h-6" />, color: 'bg-amber-500 shadow-amber-500/20' },
   ];
 
-  // Mocked recently reported incidents feed
-  const recentIncidents = [
-    { id: 1, type: 'Fire Incident', status: 'Active', time: '2 mins ago', location: 'MacArthur Hwy, San Fernando', icon: <Flame className="w-4 h-4" />, color: 'text-red-600', bg: 'bg-red-100' },
-    { id: 2, type: 'Vehicle Accident', status: 'Responding', time: '14 mins ago', location: 'NLEX Exit', icon: <Car className="w-4 h-4" />, color: 'text-orange-600', bg: 'bg-orange-100' },
-    { id: 3, type: 'Road Hazard', status: 'Verifying', time: '1 hr ago', location: 'Capitol Blvd', icon: <AlertTriangle className="w-4 h-4" />, color: 'text-amber-600', bg: 'bg-amber-100' },
-  ];
+  const getTypeRenderData = (type: string) => {
+    switch (type) {
+      case 'accident': return { label: 'Vehicle Accident', icon: <Car className="w-4 h-4" />, color: 'text-orange-600', bg: 'bg-orange-100' };
+      case 'fire': return { label: 'Fire Incident', icon: <Flame className="w-4 h-4" />, color: 'text-red-600', bg: 'bg-red-100' };
+      case 'health': return { label: 'Medical Emergency', icon: <Hospital className="w-4 h-4" />, color: 'text-rose-600', bg: 'bg-rose-100' };
+      case 'hazard': return { label: 'Road Hazard', icon: <AlertTriangle className="w-4 h-4" />, color: 'text-amber-600', bg: 'bg-amber-100' };
+      default: return { label: 'Emergency Alert', icon: <AlertTriangle className="w-4 h-4" />, color: 'text-slate-600', bg: 'bg-slate-100' };
+    }
+  };
+
+  const formatTime = (ts: any) => {
+    if (!ts || !ts.toDate) return 'Just now';
+    const mins = Math.floor((new Date().getTime() - ts.toDate().getTime()) / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins} mins ago`;
+    return `${Math.floor(mins / 60)} hrs ago`;
+  };
 
   const handleTypeSelect = (id: string) => {
     setType(id);
@@ -54,10 +75,30 @@ export const IncidentReporter = ({ onClose, onReport, reportPin }: IncidentRepor
     });
   };
 
-  const handleSubmit = () => {
-    toast.success("Emergency report broadcasted to nearest command centers!");
-    onReport({ type, riskData });
-    setStep(0); // Go back to feed
+  const handleSubmit = async () => {
+    if (!type || !reportPin) {
+      toast.error('Set the report pin and incident type before submitting.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await onReport({
+        type,
+        description: description.trim(),
+        riskData,
+      });
+
+      if (result !== false) {
+        toast.success('Emergency report broadcasted to nearest command centers!');
+        setDescription('');
+        setRiskData(null);
+        setType(null);
+        setStep(0);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -93,34 +134,46 @@ export const IncidentReporter = ({ onClose, onReport, reportPin }: IncidentRepor
                 <span className="text-[10px] font-bold text-slate-400">NEARBY</span>
               </div>
               
-              {recentIncidents.map((incident) => (
+              {reportedIncidents && reportedIncidents.length > 0 ? reportedIncidents.map((incident) => {
+                const typeData = getTypeRenderData(incident.type);
+                return (
                 <div key={incident.id} className="p-4 bg-white border border-slate-200 rounded-[20px] shadow-sm hover:shadow-md transition-all">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
-                       <div className={`w-8 h-8 rounded-full ${incident.bg} ${incident.color} flex items-center justify-center`}>
-                          {incident.icon}
+                       <div className={`w-8 h-8 rounded-full ${typeData.bg} ${typeData.color} flex items-center justify-center`}>
+                          {typeData.icon}
                        </div>
-                       <span className="text-sm font-black text-slate-900">{incident.type}</span>
+                       <span className="text-sm font-black text-slate-900">{typeData.label}</span>
                     </div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                      <Clock className="w-3 h-3" /> {incident.time}
+                      <Clock className="w-3 h-3" /> {formatTime(incident.timestamp)}
                     </span>
                   </div>
                   
+                  {incident.description && (
+                    <p className="text-xs font-medium text-slate-600 bg-slate-50 border border-slate-100 p-3 rounded-xl mb-3 shadow-inner">
+                      {incident.description}
+                    </p>
+                  )}
+                  
                   <div className="flex items-center justify-between mt-3 px-1 py-2 bg-slate-50 rounded-xl border border-slate-100">
-                     <span className="text-xs font-bold text-slate-500 flex items-center gap-1.5 px-2">
-                       <MapPin className="w-3.5 h-3.5" />
-                       {incident.location}
+                     <span className="text-xs font-bold text-slate-500 flex items-center gap-1.5 px-2 truncate max-w-[150px]">
+                       <MapPin className="w-3.5 h-3.5 shrink-0" />
+                       <span className="truncate">{incident.location.address || 'Unknown'}</span>
                      </span>
                      <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md ${
-                        incident.status === 'Active' ? 'bg-red-100 text-red-600' : 
-                        incident.status === 'Responding' ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-600'
+                        incident.status === 'verified' ? 'bg-red-100 text-red-600' : 
+                        incident.status === 'resolved' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'
                      }`}>
-                       {incident.status}
+                       {incident.status.toUpperCase()}
                      </span>
                   </div>
                 </div>
-              ))}
+              )}) : (
+                <div className="p-6 text-center text-sm font-bold text-slate-400 border-2 border-dashed border-slate-200 rounded-2xl">
+                   No ongoing incidents nearby. Stay safe!
+                </div>
+              )}
             </div>
 
             <Button 
@@ -230,6 +283,20 @@ export const IncidentReporter = ({ onClose, onReport, reportPin }: IncidentRepor
                 </div>
               </div>
 
+              <div className="p-4 bg-white border border-slate-200 rounded-[20px] shadow-sm">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                  Additional Notes <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  rows={3}
+                  maxLength={240}
+                  placeholder="Landmark, lane direction, or other critical notes"
+                  className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-bold text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-200"
+                />
+              </div>
+
               {riskData && (
                 <div className="p-4 bg-white border border-slate-200 rounded-[20px] flex items-center justify-between shadow-sm">
                   <div className="flex items-center gap-3">
@@ -246,11 +313,12 @@ export const IncidentReporter = ({ onClose, onReport, reportPin }: IncidentRepor
             </div>
 
             <div className="flex gap-3 pt-4">
-              <Button variant="ghost" className="shrink-0 px-6 bg-white border border-slate-200 hover:bg-slate-50" onClick={() => setStep(1)}>Back</Button>
+              <Button variant="ghost" className="shrink-0 px-6 bg-white border border-slate-200 hover:bg-slate-50" onClick={() => setStep(1)} disabled={isSubmitting}>Back</Button>
               <Button
                 className="flex-1 bg-red-600 hover:bg-red-700 shadow-xl shadow-red-500/25 h-12 text-sm uppercase tracking-widest text-white rounded-xl font-bold"
                 onClick={handleSubmit}
-                disabled={!reportPin}
+                disabled={!reportPin || isSubmitting || description.trim().length === 0}
+                isLoading={isSubmitting}
               >
                 Broadcast Alert
               </Button>
