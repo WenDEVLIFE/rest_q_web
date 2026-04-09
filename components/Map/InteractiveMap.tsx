@@ -1,15 +1,17 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import establishmentsData from '../../public/establishment.json';
+import { Incident } from '../../src/types/incident';
 
 
 interface InteractiveMapProps {
   overlayMode: 'none' | 'flood' | 'typhoon' | 'route' | 'report';
   reportPin?: { lat: number; lng: number } | null;
   focusPin?: { lat: number; lng: number } | null;
+  reportedIncidents?: Incident[];
   onMapClick?: (lat: number, lng: number) => void;
 }
 
@@ -25,7 +27,7 @@ const getIconForType = (type: string) => {
 
   if (type === "Healthcare Facility") {
     colorClass = "bg-rose-500 shadow-rose-500/40";
-    svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`; // Activity
+    svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`; // Heart
   } else if (type === "Emergency Service") {
     colorClass = "bg-red-500 shadow-red-500/40";
     svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>`; // Flame
@@ -68,6 +70,20 @@ const ReportPinIcon = L.divIcon({
   iconAnchor: [24, 48],
 });
 
+const OpenIncidentIcon = L.divIcon({
+  className: 'custom-open-incident-icon',
+  html: `
+    <div class="relative w-10 h-10 -ml-5 -mt-10">
+      <div class="absolute inset-0 rounded-full bg-red-500/30 animate-ping"></div>
+      <div class="absolute inset-0 rounded-full bg-red-600 border-2 border-white flex items-center justify-center text-white shadow-lg">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+      </div>
+    </div>
+  `,
+  iconSize: [40, 40],
+  iconAnchor: [20, 40],
+});
+
 // A small component to handle map clicks safely
 const MapEvents = ({ onMapClick }: { onMapClick?: (lat: number, lng: number) => void }) => {
   const map = useMap();
@@ -94,7 +110,7 @@ const MapController = ({ focusPin }: { focusPin?: { lat: number, lng: number } |
   return null;
 };
 
-export default function InteractiveMap({ overlayMode, reportPin, focusPin, onMapClick }: InteractiveMapProps) {
+export default function InteractiveMap({ overlayMode, reportPin, focusPin, reportedIncidents, onMapClick }: InteractiveMapProps) {
   // Center roughly to the establishments data
   const center: [number, number] = [15.0589, 120.6460];
 
@@ -158,7 +174,7 @@ export default function InteractiveMap({ overlayMode, reportPin, focusPin, onMap
         {/* --- OVERLAYS --- */}
 
         {/* Flood Overlay */}
-        {overlayMode === 'flood' && floodZones.map((zone, idx) => (
+        {(overlayMode === 'flood' || overlayMode === 'emergency') && floodZones.map((zone, idx) => (
           <Circle
             key={idx}
             center={zone.center as [number, number]}
@@ -168,7 +184,7 @@ export default function InteractiveMap({ overlayMode, reportPin, focusPin, onMap
         ))}
 
         {/* Typhoon Overlay */}
-        {overlayMode === 'typhoon' && (
+        {(overlayMode === 'typhoon' || overlayMode === 'emergency') && (
           <Circle
             center={typhoonCenter}
             radius={typhoonRadius}
@@ -183,6 +199,25 @@ export default function InteractiveMap({ overlayMode, reportPin, focusPin, onMap
             pathOptions={{ color: '#059669', weight: 6, opacity: 0.8 }}
           />
         )}
+
+        {/* Live unresolved incidents from Firestore */}
+        {reportedIncidents?.map((incident) => (
+          <Marker
+            key={incident.id}
+            position={[incident.location.lat, incident.location.lng]}
+            icon={OpenIncidentIcon}
+          >
+            <Popup>
+              <strong>{incident.type.toUpperCase()}</strong>
+              <br />
+              Status: {incident.status}
+              <br />
+              Reporter: {incident.reporter}
+              <br />
+              {incident.location.address}
+            </Popup>
+          </Marker>
+        ))}
 
         {/* Interactive Reporting Pin */}
         {overlayMode === 'report' && reportPin && (
