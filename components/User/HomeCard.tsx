@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState } from 'react';
-import { 
-  Search, 
-  MapPin, 
-  Navigation, 
-  AlertTriangle, 
-  Hospital, 
+import {
+  Search,
+  MapPin,
+  Navigation,
+  AlertTriangle,
+  Hospital,
   CloudRain,
   Wind,
   History,
@@ -17,18 +17,19 @@ import { useAuth } from '../../src/context/AuthContext';
 import { Button } from '../UI/Button';
 
 interface HomeCardProps {
-  onActionSelect: (action: 'report' | 'route' | 'facilities' | 'history') => void;
+  onActionSelect: (action: 'report' | 'route' | 'facilities' | 'history' | 'flood' | 'typhoon') => void;
+  isSidebar?: boolean;
 }
 
-export const HomeCard = ({ onActionSelect }: HomeCardProps) => {
+export const HomeCard = ({ onActionSelect, isSidebar }: HomeCardProps) => {
   const { profile, loading } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
 
   return (
-    <div className="w-full max-w-md bg-white/90 backdrop-blur-xl rounded-[32px] shadow-2xl border border-white/20 overflow-hidden animate-in zoom-in-95 duration-500 font-inter">
+    <div className={`w-full ${isSidebar ? 'h-full flex flex-col bg-white overflow-hidden' : 'max-w-md bg-white/90 backdrop-blur-xl rounded-[32px] shadow-2xl border border-white/20 overflow-hidden animate-in zoom-in-95 duration-500'} font-inter`}>
       {/* Header Info */}
       <div className="p-8 text-center pb-6">
-        <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2 italic">Res-Q Pulse</h2>
+        <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2 italic">Res-Q</h2>
         <p className="text-sm font-bold text-slate-500 leading-relaxed max-w-[280px] mx-auto">
           Monitor life-critical hazards and coordinate emergency response routes.
         </p>
@@ -38,9 +39,9 @@ export const HomeCard = ({ onActionSelect }: HomeCardProps) => {
       <div className="px-8 pb-8">
         <div className="relative group">
           <MapPin className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-primary group-focus-within:scale-110 transition-transform" />
-          <input 
-            type="text" 
-            placeholder="Enter location to assess risk..." 
+          <input
+            type="text"
+            placeholder="Enter location to assess risk..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-12 pr-12 py-4 bg-slate-50/50 border-2 border-slate-100 rounded-2xl text-sm font-bold text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-primary/20 focus:ring-8 focus:ring-primary/5 transition-all shadow-inner"
@@ -63,25 +64,27 @@ export const HomeCard = ({ onActionSelect }: HomeCardProps) => {
 
         {/* Quick Action Icons */}
         <div className="grid grid-cols-4 gap-4 mb-2">
-          <ActionButton 
-            icon={<CloudRain className="w-6 h-6" />} 
-            label="Flood Risk" 
+          <ActionButton
+            icon={<CloudRain className="w-6 h-6" />}
+            label="Flood Risk"
             color="bg-sky-500 text-white"
+            onClick={() => onActionSelect('flood')}
           />
-          <ActionButton 
-            icon={<Wind className="w-6 h-6" />} 
-            label="Typhoon" 
+          <ActionButton
+            icon={<Wind className="w-6 h-6" />}
+            label="Typhoon"
             color="bg-indigo-500 text-white"
+            onClick={() => onActionSelect('typhoon')}
           />
-          <ActionButton 
-            icon={<Navigation className="w-6 h-6" />} 
-            label="Safe Route" 
+          <ActionButton
+            icon={<Navigation className="w-6 h-6" />}
+            label="Safe Route"
             color="bg-emerald-500 text-white"
             onClick={() => onActionSelect('route')}
           />
-          <ActionButton 
-            icon={<AlertTriangle className="w-6 h-6" />} 
-            label="Report" 
+          <ActionButton
+            icon={<AlertTriangle className="w-6 h-6" />}
+            label="Report"
             color="bg-red-500 text-white"
             onClick={() => onActionSelect('report')}
           />
@@ -89,8 +92,8 @@ export const HomeCard = ({ onActionSelect }: HomeCardProps) => {
       </div>
 
       {/* Bottom Footer Action */}
-      <div className="bg-slate-50/80 p-6 flex flex-col gap-3 border-t border-slate-100">
-        <button 
+      <div className="bg-slate-50/80 p-6 flex-1 flex flex-col gap-3 border-t border-slate-100 overflow-y-auto min-h-0">
+        <button
           onClick={() => onActionSelect('facilities')}
           className="group flex items-center justify-between w-full p-4 bg-white border border-slate-200 rounded-2xl hover:border-primary/30 transition-all shadow-sm active:scale-[0.98]"
         >
@@ -107,7 +110,7 @@ export const HomeCard = ({ onActionSelect }: HomeCardProps) => {
         </button>
 
         {profile && (
-          <button 
+          <button
             onClick={() => onActionSelect('history')}
             className="group flex items-center justify-between w-full p-4 bg-white border border-slate-200 rounded-2xl hover:border-primary/30 transition-all shadow-sm active:scale-[0.98]"
           >
@@ -137,7 +140,7 @@ interface ActionButtonProps {
 
 function ActionButton({ icon, label, color, onClick }: ActionButtonProps) {
   return (
-    <button 
+    <button
       onClick={onClick}
       className="flex flex-col items-center gap-2 group"
     >
