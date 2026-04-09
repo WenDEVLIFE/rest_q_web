@@ -10,18 +10,19 @@ import { APP_ROUTES } from '../../src/constants/routes';
 import {
   Bell,
   Search,
-  HelpCircle,
   User,
   Loader2
 } from 'lucide-react';
 import { useAuth } from '../../src/context/AuthContext';
-import { Button } from '../../components/UI/Button';
+import { subscribeToOpenIncidents } from '../../src/service/Incident_Service';
+import { toast } from 'sonner';
 
 export default function AdminDashboardPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { profile, loading, logout } = useAuth();
+  const { profile, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'monitoring' | 'analytics' | 'users'>('overview');
+  const [pendingCount, setPendingCount] = useState(0);
 
   // Protect route
   useEffect(() => {
@@ -39,6 +40,20 @@ export default function AdminDashboardPage() {
       setActiveTab('monitoring'); // Default to monitoring for now as requested
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToOpenIncidents(
+      (incidents) => {
+        const pendingIncidents = incidents.filter((incident) => incident.status === 'pending');
+        setPendingCount(pendingIncidents.length);
+      },
+      () => {
+        toast.error('Unable to receive real-time incident notifications.');
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
 
   if (loading) {
     return (
@@ -90,7 +105,14 @@ export default function AdminDashboardPage() {
 
             <button className="relative p-1 text-slate-400 hover:text-primary transition-colors">
               <Bell className="w-5 h-5" />
-              <span className="absolute top-0 right-0 w-2 h-2 bg-emergency rounded-full border-2 border-white" />
+              {pendingCount > 0 && (
+                <>
+                  <span className="absolute top-0 right-0 w-2 h-2 bg-emergency rounded-full border-2 border-white" />
+                  <span className="absolute -top-2 -right-3 min-w-5 h-5 px-1.5 rounded-full bg-emergency text-white text-[10px] font-black flex items-center justify-center">
+                    {pendingCount > 99 ? '99+' : pendingCount}
+                  </span>
+                </>
+              )}
             </button>
 
             <div className="flex items-center gap-3 pl-6 border-l border-slate-200">

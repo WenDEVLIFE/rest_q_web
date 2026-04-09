@@ -1,12 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { LoginForm } from "../../components/Auth/LoginForm";
 import { RegisterForm } from "../../components/Auth/RegisterForm";
-import { Activity } from "lucide-react";
+import { useAuth } from "../../src/context/AuthContext";
+import { APP_ROUTES } from "../../src/constants/routes";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const { user, profile, loading } = useAuth();
   const [isRegistering, setIsRegistering] = useState(false);
+
+  useEffect(() => {
+    if (loading || !user) return;
+    const redirectPath = profile?.role === "admin" ? APP_ROUTES.ADMIN.DASHBOARD : APP_ROUTES.HOME;
+    router.replace(redirectPath);
+  }, [loading, user, profile, router]);
 
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden items-center justify-center p-4">
@@ -14,8 +25,15 @@ export default function LoginPage() {
       <div className="w-full max-w-[400px] flex flex-col items-center">
         {/* Branding Header */}
         <div className="flex flex-col items-center gap-4 mb-8 animate-in fade-in slide-in-from-top-4 duration-700">
-          <div className="p-3 bg-primary rounded-2xl text-white shadow-xl shadow-primary/20">
-            <Activity className="w-10 h-10" />
+          <div className="w-16 h-16 rounded-2xl overflow-hidden border border-slate-200 shadow-xl shadow-primary/20 bg-white">
+            <Image
+              src="/logo.png"
+              alt="Res-Q Logo"
+              width={64}
+              height={64}
+              className="w-full h-full object-contain p-1"
+              priority
+            />
           </div>
           <div className="flex flex-col items-center">
             <h1 className="text-3xl font-black tracking-tighter">Res-Q</h1>

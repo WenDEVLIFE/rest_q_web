@@ -2,10 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
-  ShieldAlert,
-  Menu,
-  User,
   ChevronRight,
   Loader2,
   LogOut,
@@ -15,11 +13,16 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../src/context/AuthContext';
 import { HomeCard } from '../components/User/HomeCard';
-import { IncidentReporter } from '../components/User/IncidentReporter';
+import { IncidentReporter, IncidentReportPayload } from '../components/User/IncidentReporter';
+import { IncidentHistory } from '../components/User/IncidentHistory';
 import { RouteNavigation } from '../components/User/RouteNavigation';
 import { FacilityLocator } from '../components/User/FacilityLocator';
 import { APP_ROUTES } from '../src/constants/routes';
 import dynamic from 'next/dynamic';
+import { toast } from 'sonner';
+import { createIncidentReport, subscribeToOpenIncidents, subscribeToCompleteHistory } from '../src/service/Incident_Service';
+import { Incident } from '../src/types/incident';
+import { useRouter } from 'next/navigation';
 
 const InteractiveMap = dynamic(() => import('../components/Map/InteractiveMap'), {
   ssr: false,
@@ -31,11 +34,23 @@ const InteractiveMap = dynamic(() => import('../components/Map/InteractiveMap'),
 });
 
 export default function Home() {
-  const { profile, loading, logout } = useAuth();
+  const { user, profile, loading, logout } = useAuth();
+  const router = useRouter();
   const [activeView, setActiveView] = useState<'home' | 'report' | 'route' | 'facilities' | 'history'>('home');
-  const [overlayMode, setOverlayMode] = useState<'none' | 'flood' | 'typhoon' | 'route' | 'report'>('none');
+  const [overlayMode, setOverlayMode] = useState<'none' | 'flood' | 'typhoon' | 'route' | 'report' | 'explore' | 'emergency'>('none');
   const [reportPin, setReportPin] = useState<{ lat: number, lng: number } | null>(null);
   const [focusPin, setFocusPin] = useState<{ lat: number, lng: number } | null>(null);
+  const [mapIncidents, setMapIncidents] = useState<Incident[]>([]);
+  const [userIncidents, setUserIncidents] = useState<Incident[]>([]);
+  const [historyIncidents, setHistoryIncidents] = useState<Incident[]>([]);
+
+  const historyForCurrentUser = historyIncidents.filter((incident) => {
+    if (!profile && !user) return false;
+    return (
+      incident.reporter === profile?.displayName ||
+      incident.reporter === user?.email
+    );
+  });
 
   // Sync activeView with overlayMode naturally
   useEffect(() => {
@@ -43,6 +58,68 @@ export default function Home() {
     else if (activeView === 'route') setOverlayMode('route');
     else if (overlayMode === 'report' || overlayMode === 'route') setOverlayMode('none');
   }, [activeView]);
+
+  useEffect(() => {
+    const unsubscribeMap = subscribeToOpenIncidents(
+      (incidents) => setMapIncidents(incidents),
+      (error) => {
+        console.error('Map incident stream failed:', error);
+      }
+    );
+
+    const unsubscribeFeed = subscribeToOpenIncidents(
+      (incidents) => setUserIncidents(incidents),
+      (error) => {
+        console.error('User incident stream failed:', error);
+      }
+    );
+
+    const unsubscribeHistory = subscribeToCompleteHistory(
+      (incidents) => setHistoryIncidents(incidents),
+      (error) => {
+        console.error('History incident stream failed:', error);
+      }
+    );
+
+    return () => {
+      unsubscribeMap();
+      unsubscribeFeed();
+      unsubscribeHistory();
+    };
+  }, []);
+
+  const handleIncidentReport = async (payload: IncidentReportPayload): Promise<boolean> => {
+    if (!reportPin) {
+      toast.error('Pin the incident location on the map first.');
+      return false;
+    }
+
+    const severity = payload.riskData?.risk === 'High' ? 'high' : 'medium';
+    const defaultDescription = `Reported ${payload.type} incident from user panel.`;
+
+    try {
+      await createIncidentReport({
+        type: payload.type as Incident['type'],
+        location: {
+          lat: reportPin.lat,
+          lng: reportPin.lng,
+          address: `Lat ${reportPin.lat.toFixed(4)}, Lng ${reportPin.lng.toFixed(4)}`,
+        },
+        reporter: profile?.displayName || user?.email || 'Anonymous User',
+        description: payload.description || defaultDescription,
+        severity,
+      });
+
+      setReportPin(null);
+      setActiveView('home');
+      setOverlayMode('none');
+      return true;
+    } catch (error) {
+      console.error('Failed to submit incident:', error);
+      toast.error('Unable to submit report. Please try again.');
+      return false;
+    }
+  };
 
   const handleActionSelect = (action: string) => {
     if (action === 'flood' || action === 'typhoon') {
@@ -66,14 +143,32 @@ export default function Home() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push(APP_ROUTES.LOGIN);
+    } catch (error) {
+      toast.error('Logout failed. Please try again.');
+    }
+  };
+
+  const handleEmergencyMapClick = () => {
+    setActiveView('home');
+    setOverlayMode('emergency');
+    setFocusPin(null);
+    setReportPin(null);
+  };
+
   const renderActiveView = () => {
     switch (activeView) {
       case 'report':
-        return <IncidentReporter onClose={() => setActiveView('home')} onReport={() => { }} reportPin={reportPin} />;
+        return <IncidentReporter onClose={() => setActiveView('home')} onReport={handleIncidentReport} reportPin={reportPin} reportedIncidents={userIncidents} />;
       case 'route':
         return <RouteNavigation onClose={() => setActiveView('home')} />;
       case 'facilities':
         return <FacilityLocator onClose={() => setActiveView('home')} onLocationSelect={(lat, lng) => setFocusPin({ lat, lng })} />;
+      case 'history':
+        return <IncidentHistory onClose={() => setActiveView('home')} incidents={historyForCurrentUser} />;
       default:
         // If it's a full-screen NOAH mode overlay, we don't render the HomeCard side panel
         if (overlayMode === 'flood' || overlayMode === 'typhoon') {
@@ -90,41 +185,49 @@ export default function Home() {
     }
   };
 
-  // Determine if the interactive map should be visible
-  const isMapActive = overlayMode !== 'none' || activeView !== 'home';
-  const isFullScreenNoahMode = overlayMode === 'flood' || overlayMode === 'typhoon';
+  // Determines whether the side panel is docked to the left (true) or centered (false)
+  const isMapActive = activeView !== 'home' || overlayMode === 'explore' || overlayMode === 'emergency';
+  const isFullScreenNoahMode = overlayMode === 'flood' || overlayMode === 'typhoon' || overlayMode === 'emergency';
 
   return (
     <div className="relative min-h-screen w-full flex flex-col font-inter overflow-hidden bg-slate-200">
+      {/* Background Layer: Static Image or Interactive Map */}
+      <div className="absolute inset-0 z-0">
+        {activeView === 'home' && overlayMode === 'none' ? (
+          <div
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-1000 scale-105"
+            style={{ backgroundImage: "url('/map.jpg')" }}
+          >
+            <div className="absolute inset-0 bg-slate-900/10 backdrop-blur-[1px]" />
+          </div>
+        ) : (
+          <InteractiveMap
+            overlayMode={overlayMode}
+            reportPin={reportPin}
+            focusPin={focusPin}
+            reportedIncidents={mapIncidents}
+            onMapClick={(lat, lng) => setReportPin({ lat, lng })}
+          />
+        )}
+      </div>
 
-      {/* Default Static Background (visible only when no action is active) */}
-      {!isMapActive && (
-        <div
-          className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat transition-all duration-1000 scale-105"
-          style={{ backgroundImage: "url('/map.jpg')" }}
-        >
-          <div className="absolute inset-0 bg-slate-900/10 backdrop-blur-[1px]" />
-        </div>
+      {/* Modern Blur Overlay: ONLY for Home view with static background to make HomeCard pop */}
+      {activeView === 'home' && overlayMode === 'none' && (
+        <div className="absolute inset-0 bg-white/20 backdrop-blur-md pointer-events-none z-10 transition-all duration-500" />
       )}
-
-      {/* Interactive Map Component replaces the static background when active */}
-      {isMapActive && (
-        <InteractiveMap
-          overlayMode={overlayMode}
-          reportPin={reportPin}
-          focusPin={focusPin}
-          onMapClick={(lat, lng) => setReportPin({ lat, lng })}
-        />
-      )}
-
-      {/* Dark overlay ONLY for Home view to make HomeCard pop */}
-      {!isMapActive && <div className="absolute inset-0 bg-slate-900/5 backdrop-blur-[1px] pointer-events-none z-10" />}
 
       {/* Header Overlay */}
       <header className="relative z-50 h-20 px-8 flex items-center justify-between bg-white/80 backdrop-blur-lg border-b border-white/60 shadow-sm pointer-events-auto">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary/20">
-            <ShieldAlert className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-primary/20 border border-slate-100 bg-white">
+            <Image
+              src="/logo.png"
+              alt="Res-Q Logo"
+              width={40}
+              height={40}
+              className="w-full h-full object-contain p-0.5"
+              priority
+            />
           </div>
           <div>
             <h1 className="text-xl font-black tracking-tighter text-slate-900 leading-none">Res-Q</h1>
@@ -134,8 +237,12 @@ export default function Home() {
 
         <div className="flex items-center gap-6">
           <nav className="hidden md:flex items-center gap-8">
-            <Link href="/" className="text-sm font-black text-slate-900 hover:text-primary transition-colors">Emergency Map</Link>
-            <Link href="#" className="text-sm font-bold text-slate-600 hover:text-primary transition-colors">Resources</Link>
+            <button
+              onClick={handleEmergencyMapClick}
+              className="text-sm font-black text-slate-900 hover:text-primary transition-colors"
+            >
+              Emergency Map
+            </button>
           </nav>
 
           <div className="flex items-center gap-3 pl-6 border-l border-slate-900/10">
@@ -157,7 +264,7 @@ export default function Home() {
                   </Link>
                 )}
                 <button
-                  onClick={() => logout()}
+                  onClick={handleLogout}
                   className="p-2.5 bg-white border border-slate-200 text-slate-500 rounded-xl hover:text-red-600 hover:bg-red-50 transition-all active:scale-95"
                   title="Sign Out"
                 >
@@ -184,7 +291,7 @@ export default function Home() {
              <div>
                 <h3 className="text-sm font-black text-white uppercase tracking-[0.2em] flex items-center gap-2">
                   <Activity className="w-5 h-5 text-emerald-400 animate-pulse" />
-                  {overlayMode === 'flood' ? 'Flood Risk' : 'Typhoon'} Radar
+                  {overlayMode === 'flood' ? 'Flood Risk' : overlayMode === 'emergency' ? 'Full Hazard' : 'Typhoon'} Radar
                 </h3>
                 <p className="text-[10px] font-mono text-slate-400 mt-1 uppercase tracking-widest">LIVE • Telemetry Active</p>
              </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Mail, Lock, User, ArrowRight } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../UI/Button';
 import { Input } from '../UI/Input';
 import { RegisterHandler } from '../../src/agents/UserAgent/RegisterHandler';
@@ -24,6 +24,7 @@ export const RegisterForm = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showOTP, setShowOTP] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -101,10 +102,20 @@ export const RegisterForm = () => {
           label="Password"
           name="password"
           placeholder="••••••••"
-          type="password"
+          type={showPassword ? "text" : "password"}
           value={formData.password}
           onChange={handleInputChange}
           leftIcon={<Lock className="w-5 h-5" />}
+          rightIcon={
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="p-1 hover:bg-slate-200 rounded-md transition-colors"
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          }
           required
         />
       </div>

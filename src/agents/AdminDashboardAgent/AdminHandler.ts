@@ -7,7 +7,7 @@ import {
   deleteDoc, 
   query, 
   orderBy,
-  Timestamp, 
+  Timestamp,
   where
 } from "firebase/firestore";
 import { db } from "../../data/firebase";
@@ -18,6 +18,8 @@ import {
   signOut, 
   updateProfile,
 } from "firebase/auth";
+import { Incident } from "../../types/incident";
+import { removeIncidentById, subscribeToIncidents as subscribeToIncidentStream, updateIncidentStatus } from "../../service/Incident_Service";
 
 // Secondary App Configuration for External User Creation
 // This prevents the Admin from being signed out during user registration.
@@ -35,21 +37,6 @@ const getSecondaryAuth = () => {
     || initializeApp(secondaryFirebaseConfig, 'SecondaryAdminApp');
   return getAuth(secondaryApp);
 };
-
-export interface Incident {
-  id: string;
-  type: 'accident' | 'closure' | 'hazard' | 'other';
-  location: {
-    lat: number;
-    lng: number;
-    address: string;
-  };
-  reporter: string;
-  timestamp: Timestamp;
-  status: 'pending' | 'verified' | 'resolved';
-  description: string;
-  severity: 'low' | 'medium' | 'high';
-}
 
 export interface TrafficStats {
   timestamp: string;
@@ -104,15 +91,7 @@ export class AdminHandler {
   */
   static async verifyIncident(id: string): Promise<void> {
     try {
-      const incidentRef = doc(db, this.COLLECTION_NAME, id);
-      const docSnapshot = await getDocs(query(collection(db, this.COLLECTION_NAME), where("id", "==", id)));
-      
-      if (docSnapshot.empty) {
-        console.error(`Document with ID ${id} does not exist.`);
-        throw new Error(`Document with ID ${id} does not exist.`);
-      }
-
-      await updateDoc(incidentRef, { status: 'verified' });
+      await updateIncidentStatus(id, 'verified');
     } catch (error) {
       console.error("Error verifying incident:", error);
       throw error;
@@ -124,12 +103,21 @@ export class AdminHandler {
   */
   static async removeIncident(id: string): Promise<void> {
     try {
-      const incidentRef = doc(db, this.COLLECTION_NAME, id);
-      await deleteDoc(incidentRef);
+      await removeIncidentById(id);
     } catch (error) {
       console.error("Error removing incident:", error);
       throw error;
     }
+  }
+
+  /**
+  * Subscribes to incident updates in real-time
+  */
+  static subscribeToIncidents(
+    callback: (incidents: Incident[]) => void,
+    onError?: (error: Error) => void,
+  ): () => void {
+    return subscribeToIncidentStream(callback, onError);
   }
 
   /**

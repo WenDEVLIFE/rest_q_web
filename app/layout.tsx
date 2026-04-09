@@ -16,6 +16,11 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Res-Q | Emergency Response System",
   description: "Real-time incident reporting and emergency coordination platform.",
+  icons: {
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 import { AuthProvider } from "../src/context/AuthContext";
