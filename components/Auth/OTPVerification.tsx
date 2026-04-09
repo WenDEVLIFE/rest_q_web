@@ -7,6 +7,7 @@ import { RegisterHandler } from '../../src/agents/UserAgent/RegisterHandler';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { verifyEmailOtpCode } from '../../src/service/Email_Service';
+import { APP_ROUTES } from '../../src/constants/routes';
 
 interface OTPVerificationProps {
   email: string;
@@ -71,7 +72,7 @@ export const OTPVerification = ({
       await RegisterHandler.register(email, password, name);
       toast.success("Account created successfully!");
       setTimeout(() => {
-        router.push('/login');
+        router.push(APP_ROUTES.LOGIN);
       }, 1500);
     } catch (err: any) {
       toast.error(err.message || "Registration failed. Please try again.");
