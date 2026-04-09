@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Mail, Lock } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../UI/Button';
 import { Input } from '../UI/Input';
 import { LoginHandler } from '../../src/agents/UserAgent/LoginHandler';
@@ -14,6 +14,7 @@ export const LoginForm = () => {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,7 +43,7 @@ export const LoginForm = () => {
       
       // Redirect to dashboard after a short delay
       setTimeout(() => {
-        router.push(redirectPath);
+        router.replace(redirectPath);
       }, 800);
     } catch (err: any) {
       console.error("Login Error:", err);
@@ -68,10 +69,20 @@ export const LoginForm = () => {
         <Input
           label="Password"
           placeholder="••••••••"
-          type="password"
+          type={showPassword ? "text" : "password"}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           leftIcon={<Lock className="w-5 h-5" />}
+          rightIcon={
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="p-1 hover:bg-slate-200 rounded-md transition-colors"
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          }
           autoComplete="current-password"
           required
         />
