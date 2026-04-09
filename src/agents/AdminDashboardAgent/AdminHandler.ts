@@ -20,6 +20,8 @@ import {
 } from "firebase/auth";
 import { Incident } from "../../types/incident";
 import { removeIncidentById, subscribeToIncidents as subscribeToIncidentStream, updateIncidentStatus } from "../../service/Incident_Service";
+import { UserRecord } from "@/src/types/user_record";
+import { TrafficStats } from "@/src/types/traffic_stats";
 
 // Secondary App Configuration for External User Creation
 // This prevents the Admin from being signed out during user registration.
@@ -38,22 +40,7 @@ const getSecondaryAuth = () => {
   return getAuth(secondaryApp);
 };
 
-export interface TrafficStats {
-  timestamp: string;
-  volume: number;
-  speed: number;
-  occupancy: number;
-}
 
-export interface UserRecord {
-  uid: string;
-  displayName: string;
-  email: string;
-  createdAt: Timestamp;
-  lastLogin: Timestamp;
-  role: 'user' | 'admin' ;
-  status: 'active' | 'inactive' | 'suspended';
-}
 
 /**
 * AdminDashboardAgent: AdminHandler
