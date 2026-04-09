@@ -1,0 +1,74 @@
+[
+    {
+        "Name": "City Disaster Risk Reduction and Management Office (CDRRMO)",
+        "Latitude": 15.05897857,
+        "Longitude": 120.646035,
+        "Establishment Type": "Government Office"
+    },
+    {
+        "Name": "City Public Order and Safety Coordinating Office (CPOSCO)",
+        "Latitude": 15.08646594,
+        "Longitude": 120.6562574,
+        "Establishment Type": "Government Office"
+    },
+    {
+        "Name": "Rural Health Unit V",
+        "Latitude": 15.09001018,
+        "Longitude": 120.6528755,
+        "Establishment Type": "Healthcare Facility"
+    },
+    {
+        "Name": "Rural Health Unit II",
+        "Latitude": 15.07943352,
+        "Longitude": 120.6420099,
+        "Establishment Type": "Healthcare Facility"
+    },
+    {
+        "Name": "Rural Health Unit I",
+        "Latitude": 15.03293538,
+        "Longitude": 120.6848804,
+        "Establishment Type": "Healthcare Facility"
+    },
+    {
+        "Name": "Rural Health Unit IV",
+        "Latitude": 15.05292398,
+        "Longitude": 120.6700422,
+        "Establishment Type": "Healthcare Facility"
+    },
+    {
+        "Name": "Rural Health Unit III",
+        "Latitude": 15.03092917,
+        "Longitude": 120.6987191,
+        "Establishment Type": "Healthcare Facility"
+    },
+    {
+        "Name": "JBL Memorial General Hospital",
+        "Latitude": 15.03472226,
+        "Longitude": 120.6846036,
+        "Establishment Type": "Healthcare Facility"
+    },
+    {
+        "Name": "Ricardo P. Rodriguez Memorial Hospital",
+        "Latitude": 15.0812778,
+        "Longitude": 120.6618476,
+        "Establishment Type": "Healthcare Facility"
+    },
+    {
+        "Name": "OFW Hospital",
+        "Latitude": 15.08071547,
+        "Longitude": 120.6374262,
+        "Establishment Type": "Healthcare Facility"
+    },
+    {
+        "Name": "Central Fire Station",
+        "Latitude": 15.02930052,
+        "Longitude": 120.6934465,
+        "Establishment Type": "Emergency Service"
+    },
+    {
+        "Name": "Malpitic Fire Sub-Station",
+        "Latitude": 15.08501271,
+        "Longitude": 120.6546572,
+        "Establishment Type": "Emergency Service"
+    }
+]
