@@ -109,5 +109,26 @@ package.json
 README.md
 
 
+Design System & Theme
+----------------------
+
+### Theme: Res-Q High-Visibility (Light Mode)
+
+* **Objective:** Prioritize maximum legibility, trust, and professional emergency response aesthetics.
+* **Core Palette:**
+	+ **Primary:** `#0284c7` (Sky Blue) - Represents trust, technical precision, and authority.
+	+ **Emergency:** `#dc2626` (Red) - Used for critical incidents and urgent alerts.
+	+ **Warning:** `#d97706` (Amber) - Used for caution, road closures, and non-critical incidents.
+	+ **Stable:** `#059669` (Green) - Used for resolved incidents and safe statuses.
+	+ **Background:** `#ffffff` (Pure White) - Ensures maximum readability in all lighting conditions.
+	+ **Surface:** `#f8fafc` (Slate 50) - Used for cards, sidebars, and UI element separation.
+* **Typography:**
+	+ **Primary Font:** Inter (Sans-serif) - Chosen for high legibility and modern feel.
+	+ **Data Font:** JetBrains Mono - Used for coordinates, time stamps, and telemetry data.
+* **UI Principles:**
+	+ **High Contrast:** Ensure all critical information meets WCAG AAA standards.
+	+ **Glassmorphism:** Subtle semi-transparent overlays for map controls.
+	+ **Rounded Corners:** 12px default for a friendly yet professional appearance.
+
 <!-- END:nextjs-agent-rules -->
 
