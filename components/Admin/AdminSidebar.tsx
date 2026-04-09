@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, 
@@ -47,8 +48,15 @@ export const AdminSidebar = () => {
     <aside className="w-64 bg-surface border-r border-slate-200 h-screen flex flex-col sticky top-0 font-inter">
       <div className="p-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary/20">
-            <ShieldAlert className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-primary/20 border border-slate-100 bg-white">
+            <Image
+              src="/logo.png"
+              alt="Res-Q Logo"
+              width={40}
+              height={40}
+              className="w-full h-full object-contain p-0.5"
+              priority
+            />
           </div>
           <div>
             <h1 className="text-lg font-black tracking-tight text-slate-900 leading-none">Res-Q</h1>
