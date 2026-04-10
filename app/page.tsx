@@ -39,6 +39,7 @@ export default function Home() {
   const [activeView, setActiveView] = useState<'home' | 'report' | 'route' | 'facilities' | 'history'>('home');
   const [overlayMode, setOverlayMode] = useState<'none' | 'flood' | 'typhoon' | 'route' | 'report' | 'explore' | 'emergency'>('none');
   const [reportPin, setReportPin] = useState<{ lat: number, lng: number } | null>(null);
+  const [searchPin, setSearchPin] = useState<{ lat: number, lng: number, label?: string } | null>(null);
   const [focusPin, setFocusPin] = useState<{ lat: number, lng: number } | null>(null);
   const [mapIncidents, setMapIncidents] = useState<Incident[]>([]);
   const [userIncidents, setUserIncidents] = useState<Incident[]>([]);
@@ -157,6 +158,12 @@ export default function Home() {
     setOverlayMode('emergency');
     setFocusPin(null);
     setReportPin(null);
+    setSearchPin(null);
+  };
+
+  const handleLocationSelect = (lat: number, lng: number, label: string) => {
+    setSearchPin({ lat, lng, label });
+    setFocusPin({ lat, lng });
   };
 
   // Determines whether the side panel is docked to the left (true) or centered (false)
@@ -181,7 +188,11 @@ export default function Home() {
         return (
           <div className="relative h-full flex flex-col">
             <div className="flex-1 overflow-y-auto">
-              <HomeCard onActionSelect={handleActionSelect} isSidebar={isMapActive} />
+              <HomeCard 
+                onActionSelect={handleActionSelect} 
+                onLocationSelect={handleLocationSelect}
+                isSidebar={isMapActive} 
+              />
             </div>
           </div>
         );
@@ -204,6 +215,7 @@ export default function Home() {
           <InteractiveMap
             overlayMode={overlayMode}
             reportPin={reportPin}
+            searchPin={searchPin}
             focusPin={focusPin}
             reportedIncidents={mapIncidents}
             onMapClick={(lat, lng) => setReportPin({ lat, lng })}

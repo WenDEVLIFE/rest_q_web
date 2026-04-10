@@ -10,6 +10,7 @@ import { Incident } from '../../src/types/incident';
 interface InteractiveMapProps {
   overlayMode: 'none' | 'flood' | 'typhoon' | 'route' | 'report' | 'explore' | 'emergency';
   reportPin?: { lat: number; lng: number } | null;
+  searchPin?: { lat: number; lng: number; label?: string } | null;
   focusPin?: { lat: number; lng: number } | null;
   reportedIncidents?: Incident[];
   onMapClick?: (lat: number, lng: number) => void;
@@ -84,6 +85,22 @@ const OpenIncidentIcon = L.divIcon({
   iconAnchor: [20, 40],
 });
 
+const SearchPinIcon = L.divIcon({
+  className: "custom-search-icon",
+  html: `
+    <div class="relative w-12 h-12 -ml-6 -mt-12 group cursor-pointer drop-shadow-xl animate-in zoom-in-50 duration-500">
+      <div class="absolute inset-0 bg-primary/20 rounded-xl translate-y-1 blur-[3px]"></div>
+      <div class="relative w-12 h-12 rounded-[14px] bg-primary text-white flex items-center justify-center border-[3px] border-white z-10 transition-transform group-hover:-translate-y-1">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="11" r="3"/><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 0 1-2.827 0l-4.244-4.243a8 8 0 1 1 11.314 0z"/></svg>
+      </div>
+      <div class="absolute -bottom-1.5 left-1/2 w-0 h-0 border-l-4 border-r-4 border-t-8 border-transparent border-t-white -translate-x-1/2 z-10 transition-transform group-hover:-translate-y-1"></div>
+    </div>
+  `,
+  iconSize: [48, 48],
+  iconAnchor: [24, 48],
+  popupAnchor: [0, -50],
+});
+
 // A small component to handle map clicks safely
 const MapEvents = ({ onMapClick }: { onMapClick?: (lat: number, lng: number) => void }) => {
   const map = useMap();
@@ -110,7 +127,7 @@ const MapController = ({ focusPin }: { focusPin?: { lat: number, lng: number } |
   return null;
 };
 
-export default function InteractiveMap({ overlayMode, reportPin, focusPin, reportedIncidents, onMapClick }: InteractiveMapProps) {
+export default function InteractiveMap({ overlayMode, reportPin, searchPin, focusPin, reportedIncidents, onMapClick }: InteractiveMapProps) {
   // Center roughly to the establishments data
   const center: [number, number] = [15.0589, 120.6460];
 
@@ -225,6 +242,20 @@ export default function InteractiveMap({ overlayMode, reportPin, focusPin, repor
             <Popup>
               <strong>Incident Coordinates:</strong><br />
               {reportPin.lat.toFixed(4)}, {reportPin.lng.toFixed(4)}
+            </Popup>
+          </Marker>
+        )}
+
+        {/* Search Result Pin */}
+        {searchPin && (
+          <Marker position={[searchPin.lat, searchPin.lng]} icon={SearchPinIcon}>
+            <Popup className="font-inter">
+              <div className="text-center p-1">
+                <p className="text-[10px] font-black text-primary uppercase tracking-[0.15em] mb-1">Destination</p>
+                <p className="text-xs font-bold text-slate-900 leading-tight">
+                  {searchPin.label || "Searched Location"}
+                </p>
+              </div>
             </Popup>
           </Marker>
         )}
