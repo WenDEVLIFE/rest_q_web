@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { AdminSidebar } from '../../components/Admin/AdminSidebar';
 import { MonitoringView } from '../../components/Admin/MonitoringView';
@@ -87,34 +88,15 @@ export default function AdminDashboardPage() {
       <main className="flex-1 flex flex-col bg-slate-50/30">
         {/* Top Header Bar */}
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-10">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
+          
+       
             <h1 className="text-sm font-black text-slate-900 uppercase tracking-widest">
-              Dashboard / <span className="text-primary">{activeTab}</span>
+              <span className="text-primary">{activeTab}</span>
             </h1>
           </div>
 
           <div className="flex items-center gap-6">
-            <div className="relative hidden md:block">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Global search..."
-                className="pl-9 pr-4 py-1.5 bg-slate-50 border-2 border-slate-100 rounded-lg text-xs font-bold text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-primary/20 transition-all w-48"
-              />
-            </div>
-
-            <button className="relative p-1 text-slate-400 hover:text-primary transition-colors">
-              <Bell className="w-5 h-5" />
-              {pendingCount > 0 && (
-                <>
-                  <span className="absolute top-0 right-0 w-2 h-2 bg-emergency rounded-full border-2 border-white" />
-                  <span className="absolute -top-2 -right-3 min-w-5 h-5 px-1.5 rounded-full bg-emergency text-white text-[10px] font-black flex items-center justify-center">
-                    {pendingCount > 99 ? '99+' : pendingCount}
-                  </span>
-                </>
-              )}
-            </button>
-
             <div className="flex items-center gap-3 pl-6 border-l border-slate-200">
               <div className="text-right hidden sm:block">
                 <p className="text-xs font-black text-slate-900 leading-none">{profile.displayName}</p>

@@ -25,18 +25,17 @@ export default function LoginPage() {
       <div className="w-full max-w-[400px] flex flex-col items-center">
         {/* Branding Header */}
         <div className="flex flex-col items-center gap-4 mb-8 animate-in fade-in slide-in-from-top-4 duration-700">
-          <div className="w-16 h-16 rounded-2xl overflow-hidden border border-slate-200 shadow-xl shadow-primary/20 bg-white">
-            <Image
-              src="/logo.png"
-              alt="Res-Q Logo"
-              width={64}
-              height={64}
-              className="w-full h-full object-contain p-1"
-              priority
-            />
-          </div>
+          <div className="flex items-center gap-3">
+                       <Image
+                         src="/logo.png"
+                         alt="Res-Q Logo"
+                         width={200}
+                         height={200}
+                         className="object-contain"
+                         priority
+                       />
+                       </div>
           <div className="flex flex-col items-center">
-            <h1 className="text-3xl font-black tracking-tighter">Res-Q</h1>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
               Emergency Response System
             </p>
@@ -47,13 +46,9 @@ export default function LoginPage() {
         <div className="w-full bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
           <div className="text-center space-y-2 mb-8">
             <h2 className="text-2xl font-black tracking-tight text-slate-900">
-              {isRegistering ? "Create an Account" : "Access Console"}
+              Login
             </h2>
-            <p className="text-sm text-slate-500 font-medium leading-relaxed px-4">
-              {isRegistering
-                ? "Join the emergency response network to register and track incidents."
-                : "Enter your credentials to access the mission-critical dispatch center."}
-            </p>
+        
           </div>
 
           {isRegistering ? (

@@ -8,7 +8,7 @@ import { Incident } from '../../src/types/incident';
 
 
 interface InteractiveMapProps {
-  overlayMode: 'none' | 'flood' | 'typhoon' | 'route' | 'report';
+  overlayMode: 'none' | 'flood' | 'typhoon' | 'route' | 'report' | 'explore' | 'emergency';
   reportPin?: { lat: number; lng: number } | null;
   focusPin?: { lat: number; lng: number } | null;
   reportedIncidents?: Incident[];

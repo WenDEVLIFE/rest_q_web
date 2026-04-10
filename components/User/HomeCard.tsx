@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import {
   Search,
   MapPin,
@@ -29,9 +30,18 @@ export const HomeCard = ({ onActionSelect, isSidebar }: HomeCardProps) => {
     <div className={`w-full ${isSidebar ? 'h-full flex flex-col bg-white overflow-hidden' : 'max-w-md bg-white/90 backdrop-blur-xl rounded-[32px] shadow-2xl border border-white/20 overflow-hidden animate-in zoom-in-95 duration-500'} font-inter`}>
       {/* Header Info */}
       <div className="p-8 text-center pb-6">
-        <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2 italic">Res-Q</h2>
-        <p className="text-sm font-bold text-slate-500 leading-relaxed max-w-[280px] mx-auto">
-          Monitor life-critical hazards and coordinate emergency response routes.
+          <center>
+            <Image
+                        src="/logo.png"
+                        alt="Res-Q Logo"
+                        width={200}
+                        height={200}
+                        className="object-contain"
+                        priority
+                      />  
+          </center>
+       <p className="text-sm font-bold text-slate-500 leading-relaxed max-w-[280px] mx-auto">
+         Predicts emergency response time and recommends optimal route based on real-world conditions.
         </p>
       </div>
 
@@ -41,7 +51,7 @@ export const HomeCard = ({ onActionSelect, isSidebar }: HomeCardProps) => {
           <MapPin className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-primary group-focus-within:scale-110 transition-transform" />
           <input
             type="text"
-            placeholder="Enter location to assess risk..."
+            placeholder="Enter Incident Location..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-12 pr-12 py-4 bg-slate-50/50 border-2 border-slate-100 rounded-2xl text-sm font-bold text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-primary/20 focus:ring-8 focus:ring-primary/5 transition-all shadow-inner"

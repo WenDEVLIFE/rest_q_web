@@ -159,6 +159,9 @@ export default function Home() {
     setReportPin(null);
   };
 
+  // Determines whether the side panel is docked to the left (true) or centered (false)
+  const isMapActive = activeView !== 'home' || overlayMode === 'explore' || overlayMode === 'emergency';
+
   const renderActiveView = () => {
     switch (activeView) {
       case 'report':
@@ -184,9 +187,6 @@ export default function Home() {
         );
     }
   };
-
-  // Determines whether the side panel is docked to the left (true) or centered (false)
-  const isMapActive = activeView !== 'home' || overlayMode === 'explore' || overlayMode === 'emergency';
   const isFullScreenNoahMode = overlayMode === 'flood' || overlayMode === 'typhoon' || overlayMode === 'emergency';
 
   return (
@@ -219,19 +219,15 @@ export default function Home() {
       {/* Header Overlay */}
       <header className="relative z-50 h-20 px-8 flex items-center justify-between bg-white/80 backdrop-blur-lg border-b border-white/60 shadow-sm pointer-events-auto">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-primary/20 border border-slate-100 bg-white">
-            <Image
-              src="/logo.png"
-              alt="Res-Q Logo"
-              width={40}
-              height={40}
-              className="w-full h-full object-contain p-0.5"
-              priority
-            />
-          </div>
+         <Image
+                                 src="/logo.png"
+                                 alt="Res-Q Logo"
+                                 width={100}
+                                 height={100}
+                                 className="object-contain"
+                                 priority
+                               />
           <div>
-            <h1 className="text-xl font-black tracking-tighter text-slate-900 leading-none">Res-Q</h1>
-            <p className="text-[10px] font-black text-primary tracking-widest uppercase mt-1">Life-Coordination Portal</p>
           </div>
         </div>
 

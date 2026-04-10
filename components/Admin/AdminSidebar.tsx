@@ -17,7 +17,6 @@ import { useSearchParams } from 'next/navigation';
 import { useAuth } from '../../src/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { cn } from '../../src/utils/cn'; // Assuming a utility for class names exists or I can use templates
 
 export const AdminSidebar = () => {
   const pathname = usePathname();
@@ -48,20 +47,21 @@ export const AdminSidebar = () => {
     <aside className="w-64 bg-surface border-r border-slate-200 h-screen flex flex-col sticky top-0 font-inter">
       <div className="p-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-primary/20 border border-slate-100 bg-white">
-            <Image
-              src="/logo.png"
-              alt="Res-Q Logo"
-              width={40}
-              height={40}
-              className="w-full h-full object-contain p-0.5"
-              priority
-            />
-          </div>
-          <div>
-            <h1 className="text-lg font-black tracking-tight text-slate-900 leading-none">Res-Q</h1>
-            <p className="text-[10px] font-bold text-primary tracking-widest uppercase mt-1">Admin Portal</p>
-          </div>
+         <div className="flex items-center gap-3">
+              <Image
+                src="/logo.png"
+                alt="Res-Q Logo"
+                width={100}
+                height={100}
+                className="object-contain"
+                priority
+              />
+              <div>
+                <h2 className="text-lg font-black tracking-tight text-slate-900 leading-none">Res-Q</h2>
+                <p className="text-[10px] font-bold text-primary tracking-widest uppercase mt-0.5">Admin Portal</p>
+              </div>
+            </div>
+        
         </div>
       </div>
 
