@@ -39,7 +39,6 @@ export default function Home() {
   const [activeView, setActiveView] = useState<'home' | 'report' | 'route' | 'facilities' | 'history'>('home');
   const [overlayMode, setOverlayMode] = useState<'none' | 'flood' | 'typhoon' | 'route' | 'report' | 'explore' | 'emergency'>('none');
   const [reportPin, setReportPin] = useState<{ lat: number, lng: number } | null>(null);
-  const [searchPin, setSearchPin] = useState<{ lat: number, lng: number, label?: string } | null>(null);
   const [focusPin, setFocusPin] = useState<{ lat: number, lng: number } | null>(null);
   const [mapIncidents, setMapIncidents] = useState<Incident[]>([]);
   const [userIncidents, setUserIncidents] = useState<Incident[]>([]);
@@ -128,14 +127,14 @@ export default function Home() {
       setOverlayMode(prev => prev === action ? 'none' : action as any);
     } else {
       setActiveView(action as any);
-      
+
       // Update overlay mode to match the active view for routing/reporting map features
       if (action === 'report' || action === 'route') {
         setOverlayMode(action as any);
       } else {
         setOverlayMode('none');
       }
-      
+
       // Clear pins when returning home
       if (action === 'home') {
         setReportPin(null);
@@ -158,12 +157,6 @@ export default function Home() {
     setOverlayMode('emergency');
     setFocusPin(null);
     setReportPin(null);
-    setSearchPin(null);
-  };
-
-  const handleLocationSelect = (lat: number, lng: number, label: string) => {
-    setSearchPin({ lat, lng, label });
-    setFocusPin({ lat, lng });
   };
 
   // Determines whether the side panel is docked to the left (true) or centered (false)
@@ -188,11 +181,7 @@ export default function Home() {
         return (
           <div className="relative h-full flex flex-col">
             <div className="flex-1 overflow-y-auto">
-              <HomeCard 
-                onActionSelect={handleActionSelect} 
-                onLocationSelect={handleLocationSelect}
-                isSidebar={isMapActive} 
-              />
+              <HomeCard onActionSelect={handleActionSelect} isSidebar={isMapActive} />
             </div>
           </div>
         );
@@ -215,7 +204,6 @@ export default function Home() {
           <InteractiveMap
             overlayMode={overlayMode}
             reportPin={reportPin}
-            searchPin={searchPin}
             focusPin={focusPin}
             reportedIncidents={mapIncidents}
             onMapClick={(lat, lng) => setReportPin({ lat, lng })}
@@ -231,14 +219,14 @@ export default function Home() {
       {/* Header Overlay */}
       <header className="relative z-50 h-20 px-8 flex items-center justify-between bg-white/80 backdrop-blur-lg border-b border-white/60 shadow-sm pointer-events-auto">
         <div className="flex items-center gap-4">
-         <Image
-                                 src="/logo.png"
-                                 alt="Res-Q Logo"
-                                 width={100}
-                                 height={100}
-                                 className="object-contain"
-                                 priority
-                               />
+          <Image
+            src="/logo.png"
+            alt="Res-Q Logo"
+            width={100}
+            height={100}
+            className="object-contain"
+            priority
+          />
           <div>
           </div>
         </div>
@@ -295,59 +283,58 @@ export default function Home() {
       {/* Floating NOAH Overlay Controls */}
       {isFullScreenNoahMode && (
         <div className="absolute top-24 left-8 z-[1000] bg-slate-900/60 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.3)] p-6 w-80 animate-in fade-in slide-in-from-top-8 duration-500 font-inter text-slate-50">
-           <div className="flex items-center justify-between mb-6">
-             <div>
-                <h3 className="text-sm font-black text-white uppercase tracking-[0.2em] flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-emerald-400 animate-pulse" />
-                  {overlayMode === 'flood' ? 'Flood Risk' : overlayMode === 'emergency' ? 'Full Hazard' : 'Typhoon'} Radar
-                </h3>
-                <p className="text-[10px] font-mono text-slate-400 mt-1 uppercase tracking-widest">LIVE • Telemetry Active</p>
-             </div>
-           </div>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-sm font-black text-white uppercase tracking-[0.2em] flex items-center gap-2">
+                <Activity className="w-5 h-5 text-emerald-400 animate-pulse" />
+                {overlayMode === 'flood' ? 'Flood Risk' : overlayMode === 'emergency' ? 'Full Hazard' : 'Typhoon'} Radar
+              </h3>
+              <p className="text-[10px] font-mono text-slate-400 mt-1 uppercase tracking-widest">LIVE • Telemetry Active</p>
+            </div>
+          </div>
 
-           <div className="space-y-4 mb-6">
-             <div className="p-4 bg-black/40 rounded-2xl border border-white/5 flex items-center justify-between group hover:bg-black/60 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className={`w-2 h-8 rounded-full ${overlayMode === 'flood' ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]'}`} />
-                  <div>
-                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Hazard Level</span>
-                    <span className="block text-sm font-black text-white">Critical Watch</span>
-                  </div>
+          <div className="space-y-4 mb-6">
+            <div className="p-4 bg-black/40 rounded-2xl border border-white/5 flex items-center justify-between group hover:bg-black/60 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className={`w-2 h-8 rounded-full ${overlayMode === 'flood' ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]'}`} />
+                <div>
+                  <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Hazard Level</span>
+                  <span className="block text-sm font-black text-white">Critical Watch</span>
                 </div>
-             </div>
-             <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 bg-black/40 rounded-2xl border border-white/5">
-                  <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Impact Radius</span>
-                  <span className="block text-xs font-mono text-white">15.0 km</span>
-                </div>
-                <div className="p-3 bg-black/40 rounded-2xl border border-white/5">
-                  <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Last Update</span>
-                  <span className="block text-xs font-mono text-white">Just Now</span>
-                </div>
-             </div>
-           </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 bg-black/40 rounded-2xl border border-white/5">
+                <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Impact Radius</span>
+                <span className="block text-xs font-mono text-white">15.0 km</span>
+              </div>
+              <div className="p-3 bg-black/40 rounded-2xl border border-white/5">
+                <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Last Update</span>
+                <span className="block text-xs font-mono text-white">Just Now</span>
+              </div>
+            </div>
+          </div>
 
-           <button 
-              onClick={() => setOverlayMode('none')} 
-              className="group relative w-full py-4 bg-white/10 hover:bg-white/20 border border-white/5 text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all overflow-hidden"
-           >
-             <span className="relative z-10 flex items-center justify-center gap-2">
-                <X className="w-4 h-4" /> Exit Radar Mode
-             </span>
-             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
-           </button>
+          <button
+            onClick={() => setOverlayMode('none')}
+            className="group relative w-full py-4 bg-white/10 hover:bg-white/20 border border-white/5 text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all overflow-hidden"
+          >
+            <span className="relative z-10 flex items-center justify-center gap-2">
+              <X className="w-4 h-4" /> Exit Radar Mode
+            </span>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
+          </button>
         </div>
       )}
 
       {/* Main Content Overlay: Google Maps Side Panel Layout */}
       {!isFullScreenNoahMode && (
         <main className={`relative z-10 flex-1 flex pointer-events-none ${isMapActive ? 'justify-start' : 'items-center justify-center p-6 sm:p-12'}`}>
-          <div 
-            className={`pointer-events-auto ${
-              !isMapActive
-                ? 'w-full flex justify-center translate-y-[-2rem]' 
-                : 'w-full sm:w-[450px] h-full bg-white shadow-2xl border-r border-slate-200 animate-in slide-in-from-left-8 duration-300 overflow-y-auto'
-            }`}
+          <div
+            className={`pointer-events-auto ${!isMapActive
+              ? 'w-full flex justify-center translate-y-[-2rem]'
+              : 'w-full sm:w-[450px] h-full bg-white shadow-2xl border-r border-slate-200 animate-in slide-in-from-left-8 duration-300 overflow-y-auto'
+              }`}
           >
             {renderActiveView()}
           </div>

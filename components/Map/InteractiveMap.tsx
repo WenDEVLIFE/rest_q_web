@@ -127,14 +127,29 @@ const MapController = ({ focusPin }: { focusPin?: { lat: number, lng: number } |
   return null;
 };
 
-export default function InteractiveMap({ overlayMode, reportPin, searchPin, focusPin, reportedIncidents, onMapClick }: InteractiveMapProps) {
+import { SidebarSearch } from '../User/SidebarSearch';
+import { RiskLevelPanel } from '../User/RiskLevelPanel';
+
+export default function InteractiveMap({ overlayMode, reportPin, searchPin: externalSearchPin, focusPin, reportedIncidents, onMapClick }: InteractiveMapProps) {
   // Center roughly to the establishments data
   const center: [number, number] = [15.0589, 120.6460];
+  const [localSearchPin, setLocalSearchPin] = React.useState<{ lat: number, lng: number, label?: string } | null>(null);
+
+  // Use external search pin if provided, otherwise use local
+  const activeSearchPin = externalSearchPin || localSearchPin;
 
   const mapTilerKey = process.env.NEXT_PUBLIC_OPEN_MAPTILER_API_KEY;
   // Leaflet TileLayer strictly requires raster images (.png, .webp). Vector JSON styles will break the map rendering.
   const tileUrl = `https://tile.openstreetmap.org/{z}/{x}/{y}.png`;
   const attribution = '&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; OpenStreetMap contributors';
+
+  const handleLocationSelect = (lat: number, lng: number, label: string) => {
+    setLocalSearchPin({ lat, lng, label });
+  };
+
+  const handleReset = () => {
+    setLocalSearchPin(null);
+  };
 
   // Simulated Flood Risk Data (Circles covering specific areas in San Fernando)
   const floodZones = [
@@ -168,7 +183,7 @@ export default function InteractiveMap({ overlayMode, reportPin, searchPin, focu
         />
 
         <MapEvents onMapClick={overlayMode === 'report' ? onMapClick : undefined} />
-        <MapController focusPin={focusPin} />
+        <MapController focusPin={focusPin || activeSearchPin} />
 
         {/* --- Markers for Establishments --- */}
         {establishmentsData.map((est, idx) => (
@@ -247,19 +262,28 @@ export default function InteractiveMap({ overlayMode, reportPin, searchPin, focu
         )}
 
         {/* Search Result Pin */}
-        {searchPin && (
-          <Marker position={[searchPin.lat, searchPin.lng]} icon={SearchPinIcon}>
+        {activeSearchPin && (
+          <Marker position={[activeSearchPin.lat, activeSearchPin.lng]} icon={SearchPinIcon}>
             <Popup className="font-inter">
               <div className="text-center p-1">
                 <p className="text-[10px] font-black text-primary uppercase tracking-[0.15em] mb-1">Destination</p>
                 <p className="text-xs font-bold text-slate-900 leading-tight">
-                  {searchPin.label || "Searched Location"}
+                  {activeSearchPin.label || "Searched Location"}
                 </p>
               </div>
             </Popup>
           </Marker>
         )}
       </MapContainer>
+
+      {/* --- FLOATING UI OVERLAYS --- */}
+      <div className="absolute top-24 right-8 bottom-24 z-[1001] w-full max-w-[450px] pointer-events-auto flex flex-col justify-center">
+        <RiskLevelPanel 
+          selectedLocation={activeSearchPin}
+          onLocationSelect={handleLocationSelect}
+          onReset={handleReset}
+        />
+      </div>
     </div>
   );
 }

@@ -18,10 +18,10 @@ import {
   signOut, 
   updateProfile,
 } from "firebase/auth";
-import { Incident } from "../../types/incident";
+import type { Incident } from "../../types/incident";
 import { removeIncidentById, subscribeToIncidents as subscribeToIncidentStream, updateIncidentStatus } from "../../service/Incident_Service";
-import { UserRecord } from "@/src/types/user_record";
-import { TrafficStats } from "@/src/types/traffic_stats";
+import type { UserRecord } from "../../types/user_record";
+import type { TrafficStats } from "../../types/traffic_stats";
 
 // Secondary App Configuration for External User Creation
 // This prevents the Admin from being signed out during user registration.
@@ -279,5 +279,5 @@ export class AdminHandler {
     ];
   }
 }
-export type { UserRecord };
+
 

@@ -3,55 +3,25 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import {
-  Search,
-  MapPin,
-  Navigation,
-  AlertTriangle,
-  Hospital,
-  CloudRain,
-  Wind,
   History,
   ChevronRight,
-  Loader2,
-  X
+  ShieldAlert,
+  CloudRain,
+  Wind,
+  Navigation,
+  AlertTriangle,
+  Hospital
 } from 'lucide-react';
 import { useAuth } from '../../src/context/AuthContext';
 import { Button } from '../UI/Button';
-import { getAddressSuggestions, GeocodingResult } from '../../src/service/Map_Service';
 
 interface HomeCardProps {
   onActionSelect: (action: 'report' | 'route' | 'facilities' | 'history' | 'flood' | 'typhoon') => void;
-  onLocationSelect?: (lat: number, lng: number, label: string) => void;
   isSidebar?: boolean;
 }
 
-export const HomeCard = ({ onActionSelect, onLocationSelect, isSidebar }: HomeCardProps) => {
+export const HomeCard = ({ onActionSelect, isSidebar }: HomeCardProps) => {
   const { profile, loading } = useAuth();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [suggestions, setSuggestions] = useState<GeocodingResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-
-  const handleSearchChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchQuery(value);
-
-    if (value.length > 2) {
-      setIsSearching(true);
-      const results = await getAddressSuggestions(value);
-      setSuggestions(results);
-      setIsSearching(false);
-    } else {
-      setSuggestions([]);
-    }
-  };
-
-  const handleSuggestionSelect = (res: GeocodingResult) => {
-    setSearchQuery(res.text);
-    setSuggestions([]);
-    if (onLocationSelect) {
-      onLocationSelect(res.center[1], res.center[0], res.place_name);
-    }
-  };
 
   return (
     <div className={`w-full ${isSidebar ? 'h-full flex flex-col bg-white overflow-hidden' : 'max-w-md bg-white/90 backdrop-blur-xl rounded-[32px] shadow-2xl border border-white/20 overflow-hidden animate-in zoom-in-95 duration-500'} font-inter`}>
@@ -72,52 +42,10 @@ export const HomeCard = ({ onActionSelect, onLocationSelect, isSidebar }: HomeCa
         </p>
       </div>
 
-      {/* Main Search */}
-      <div className="px-8 pb-8">
-        <div className="relative group">
-          <MapPin className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-primary group-focus-within:scale-110 transition-transform" />
-          <input
-            type="text"
-            placeholder="Enter Incident Location..."
-            value={searchQuery}
-            onChange={handleSearchChange}
-            className="w-full pl-12 pr-12 py-4 bg-slate-50/50 border-2 border-slate-100 rounded-2xl text-sm font-bold text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-primary/20 focus:ring-8 focus:ring-primary/5 transition-all shadow-inner"
-          />
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-            {searchQuery && (
-              <button 
-                onClick={() => { setSearchQuery(''); setSuggestions([]); }}
-                className="p-2 text-slate-400 hover:text-slate-600 transition-colors"
-                title="Clear search"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-            <div className="p-2 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
-              {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-            </div>
-          </div>
-
-          {/* Suggestions Dropdown */}
-          {suggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white/80 backdrop-blur-xl border border-slate-200 rounded-[24px] shadow-2xl z-[100] max-h-64 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-300">
-              {suggestions.map((res) => (
-                <button
-                  key={res.id}
-                  onClick={() => handleSuggestionSelect(res)}
-                  className="w-full px-6 py-4 flex items-start gap-4 hover:bg-primary/5 transition-colors border-b border-slate-50 last:border-0 text-left group"
-                >
-                  <MapPin className="w-4 h-4 text-slate-400 mt-1 group-hover:text-primary transition-colors" />
-                  <div>
-                    <p className="text-sm font-black text-slate-900 leading-tight">{res.text}</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-1">{res.place_name}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
+        <div className="flex items-center justify-center p-4 bg-primary/5 rounded-2xl mx-8 mb-4 border border-primary/10">
+           <ShieldAlert className="w-4 h-4 text-primary mr-2" />
+           <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Select an action to begin</p>
         </div>
-      </div>
 
       {/* Beta Notice */}
       <div className="px-8 mb-6">
