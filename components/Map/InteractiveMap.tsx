@@ -282,6 +282,7 @@ export default function InteractiveMap({ overlayMode, reportPin, searchPin: exte
           selectedLocation={activeSearchPin}
           onLocationSelect={handleLocationSelect}
           onReset={handleReset}
+          reportedIncidents={reportedIncidents}
         />
       </div>
     </div>
