@@ -113,10 +113,12 @@ export const HomeCard = ({ onActionSelect, onLocationSelect, isSidebar, hasLocat
       </div>
 
       {/* Bottom Footer Action */}
-      <div className="bg-slate-50/80 p-6 flex-1 flex flex-col gap-3 border-t border-slate-100 overflow-y-auto min-h-0">
+      <div className="relative z-10 bg-slate-50/80 p-6 flex-1 flex flex-col gap-3 border-t border-slate-100 overflow-y-auto min-h-0 pointer-events-auto">
         <button
-          onClick={onEmergencyMap}
-          className="group flex items-center justify-between w-full p-4 bg-primary text-white rounded-2xl hover:bg-sky-700 transition-all shadow-lg shadow-primary/20 active:scale-[0.98]"
+          type="button"
+          onClick={() => onEmergencyMap?.()}
+          disabled={!onEmergencyMap}
+          className={`group relative flex items-center justify-between w-full p-4 bg-primary text-white rounded-2xl hover:bg-sky-700 transition-all shadow-lg shadow-primary/20 active:scale-[0.98] pointer-events-auto ${!onEmergencyMap ? 'cursor-not-allowed opacity-60 hover:bg-primary' : 'cursor-pointer'}`}
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
