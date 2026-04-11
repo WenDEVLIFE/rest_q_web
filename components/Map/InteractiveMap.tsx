@@ -14,6 +14,7 @@ interface InteractiveMapProps {
   focusPin?: { lat: number; lng: number } | null;
   reportedIncidents?: Incident[];
   onMapClick?: (lat: number, lng: number) => void;
+  onOverlayModeChange?: (mode: 'none' | 'flood' | 'typhoon' | 'route' | 'report' | 'explore' | 'emergency') => void;
 }
 
 // Custom DivIcons for different establishment types
@@ -130,7 +131,7 @@ const MapController = ({ focusPin }: { focusPin?: { lat: number, lng: number } |
 import { SidebarSearch } from '../User/SidebarSearch';
 import { RiskLevelPanel } from '../User/RiskLevelPanel';
 
-export default function InteractiveMap({ overlayMode, reportPin, searchPin: externalSearchPin, focusPin, reportedIncidents, onMapClick }: InteractiveMapProps) {
+export default function InteractiveMap({ overlayMode, reportPin, searchPin: externalSearchPin, focusPin, reportedIncidents, onMapClick, onOverlayModeChange }: InteractiveMapProps) {
   // Center roughly to the establishments data
   const center: [number, number] = [15.0589, 120.6460];
   const [localSearchPin, setLocalSearchPin] = React.useState<{ lat: number, lng: number, label?: string } | null>(null);
@@ -277,12 +278,13 @@ export default function InteractiveMap({ overlayMode, reportPin, searchPin: exte
       </MapContainer>
 
       {/* --- FLOATING UI OVERLAYS --- */}
-      <div className="absolute top-24 right-8 bottom-24 z-[1001] w-full max-w-[450px] pointer-events-auto flex flex-col justify-center">
-        <RiskLevelPanel 
+      <div className="absolute top-24 right-8 bottom-24 z-[1001] w-full max-w-[450px] pointer-events-auto flex flex-col justify-center animate-in slide-in-from-right-8 duration-500">
+        <RiskLevelPanel
           selectedLocation={activeSearchPin}
           onLocationSelect={handleLocationSelect}
           onReset={handleReset}
           reportedIncidents={reportedIncidents}
+          onToggleRadar={(type) => onOverlayModeChange && onOverlayModeChange(type as any)}
         />
       </div>
     </div>

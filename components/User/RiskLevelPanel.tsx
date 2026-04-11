@@ -20,7 +20,8 @@ import {
   Waves,
   Stethoscope,
   Flame,
-  HeartPulse
+  HeartPulse,
+  Hospital
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -33,6 +34,7 @@ interface RiskLevelPanelProps {
   onReset?: () => void;
   selectedLocation?: { lat: number; lng: number; label?: string } | null;
   reportedIncidents?: Incident[];
+  onToggleRadar?: (type: 'flood' | 'typhoon') => void;
 }
 
 type IncidentCategory = 'Fire Incident' | 'Health-Related Incident' | 'Flood Risk' | 'Typhoon Risk';
@@ -58,9 +60,10 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
   return d;
 };
 
-export const RiskLevelPanel = ({ onLocationSelect, onReset, selectedLocation, reportedIncidents = [] }: RiskLevelPanelProps) => {
+export const RiskLevelPanel = ({ onLocationSelect, onReset, selectedLocation, reportedIncidents = [], onToggleRadar }: RiskLevelPanelProps) => {
   const [activeTab, setActiveTab] = useState<'metrics' | 'advisory' | 'what-to-do' | 'facilities'>('metrics');
   const [manualIncidentType, setManualIncidentType] = useState<IncidentCategory>('Fire Incident');
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const nearestReportedIncident = useMemo(() => {
     if (!selectedLocation || reportedIncidents.length === 0) return null;
@@ -474,233 +477,263 @@ export const RiskLevelPanel = ({ onLocationSelect, onReset, selectedLocation, re
   }
 
   return (
-    <div className="w-full bg-white/95 backdrop-blur-3xl rounded-[40px] shadow-[0_32px_80px_-15px_rgba(0,0,0,0.25)] border border-white/40 overflow-hidden flex flex-col h-[calc(100vh-160px)]">
-      {/* Unified Header with Search */}
-      <div className="p-8 pb-6 border-b border-slate-100/50 bg-white/50 backdrop-blur-md">
-        <SidebarSearch onLocationSelect={onLocationSelect} onReset={handleReset} />
+    <div className={`relative w-full bg-white/95 backdrop-blur-3xl rounded-[40px] shadow-[0_32px_80px_-15px_rgba(0,0,0,0.25)] border border-white/40 flex flex-col h-[calc(100vh-160px)] transition-all duration-500 ease-in-out ${isCollapsed ? 'translate-x-[calc(100%-60px)] scale-[0.98] opacity-90' : 'translate-x-0'}`}>
 
-        {selectedLocation && activeTab !== 'facilities' && (
-          <div className="mt-8 flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-500">
-            <div>
-              <p className="text-[10px] font-black text-primary uppercase tracking-[0.25em] mb-1.5">Selected Focus</p>
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-tight max-w-[260px]">
-                {selectedLocation.label || "San Fernando City, Pampanga"}
-              </h2>
-            </div>
-            <button
-              onClick={handleReset}
-              className="p-3 bg-red-50 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all active:scale-90"
-              title="Clear focus"
-            >
-              <X className="w-5 h-5 transition-transform group-hover:rotate-90" />
-            </button>
-          </div>
-        )}
-      </div>
+      {/* Floating Toggle Tab (Google Maps Style) */}
+      <button
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className={`absolute -left-12 top-1/2 -translate-y-1/2 w-12 h-24 bg-white border border-slate-200 rounded-l-3xl shadow-[-12px_0_30px_rgba(0,0,0,0.15)] flex flex-col items-center justify-center group z-50 hover:bg-slate-50 transition-all active:scale-95 ${isCollapsed ? 'opacity-100' : 'opacity-80 hover:opacity-100'}`}
+        title={isCollapsed ? "Expand Place Sheet" : "Collapse Place Sheet"}
+      >
+        <div className="w-1 h-8 bg-slate-100 rounded-full mb-2 group-hover:bg-primary/20 transition-colors" />
+        <ChevronRight className={`w-6 h-6 text-slate-400 group-hover:text-primary transition-transform duration-500 ${isCollapsed ? 'rotate-180' : 'rotate-0'}`} />
+        <div className="w-1 h-8 bg-slate-100 rounded-full mt-2 group-hover:bg-primary/20 transition-colors" />
+      </button>
 
-      {/* Main Content (Emergency Metrics or Facilities) */}
-      <div className="p-8 pt-8 overflow-y-auto flex-1 custom-scrollbar">
-        {!selectedLocation ? (
-          <div className="flex flex-col items-center justify-center h-full text-center space-y-4 opacity-50">
-            <div className="w-16 h-16 bg-slate-100 rounded-3xl flex items-center justify-center">
-              <Search className="w-8 h-8 text-slate-300" />
-            </div>
-            <div>
-              <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Search to view risk level</p>
-              <p className="text-[10px] font-bold text-slate-300 uppercase mt-1">Real-time telemetry pending</p>
-            </div>
-          </div>
-        ) : activeTab === 'facilities' ? (
-          <div className="space-y-6 animate-in slide-in-from-right-8 duration-300">
-            <div className="flex items-center gap-4 mb-8">
-              <button onClick={() => setActiveTab('advisory')} className="p-2 -ml-2 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors">
-                <ChevronRight className="w-5 h-5 text-slate-500 rotate-180" />
-              </button>
-              <h3 className="text-2xl font-black text-slate-900 tracking-tight">
-                Nearest Facilities
-              </h3>
-            </div>
+      <div className="w-full h-full flex flex-col overflow-hidden rounded-[40px]">
+        {/* Unified Header with Search */}
+        <div className="p-8 pb-6 border-b border-slate-100/50 bg-white/50 backdrop-blur-md">
+          <SidebarSearch onLocationSelect={onLocationSelect} onReset={handleReset} />
 
-            <div className="space-y-4">
-              {nearbyFacilities.map((facility, idx) => {
-                let Icon = ShieldAlert;
-                let colorClasses = "bg-amber-50 text-amber-600";
-
-                if (facility["Establishment Type"] === "Healthcare Facility") {
-                  Icon = Clock; // Actually standardizing on other icons below, let's use + / Heart equivalent. I imported ShieldPlus
-                  Icon = ShieldPlus;
-                  colorClasses = "bg-blue-50 text-blue-600";
-                } else if (facility["Establishment Type"] === "Emergency Service") {
-                  Icon = Siren;
-                  colorClasses = "bg-red-50 text-red-600";
-                }
-
-                return (
-                  <div key={idx} className="bg-white border border-slate-100 rounded-2xl p-5 flex items-center gap-5 shadow-sm hover:shadow-md transition-shadow">
-                    <div className={`w-12 h-12 rounded-[16px] flex items-center justify-center border shadow-sm border-white ${colorClasses}`}>
-                      <Icon className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h4 className="text-[14px] font-black text-slate-900 leading-tight">{facility.Name}</h4>
-                      <p className="text-xs font-bold text-slate-400 uppercase mt-1 tracking-wider">{facility.distance.toFixed(2)} km away</p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        ) : activeTab === 'advisory' ? (
-          <div className="space-y-6 animate-in slide-in-from-right-8 duration-300">
-            <div className="flex items-center gap-4 mb-4">
-              <button onClick={() => setActiveTab('metrics')} className="p-2 -ml-2 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors">
-                <ChevronRight className="w-5 h-5 text-slate-500 rotate-180" />
-              </button>
-              <h3 className="text-2xl font-black text-slate-900 tracking-tight">
-                Response Insight
-              </h3>
-            </div>
-
-            <div className="rounded-3xl border border-blue-100 bg-blue-50/70 p-6 space-y-4">
-              <div className="flex items-center justify-between gap-3">
-                <Image src="/Response Time LOGO.png" alt="Response Time" width={64} height={64} className="object-contain" />
+          {selectedLocation && activeTab !== 'facilities' && (
+            <div className="mt-8 flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-500">
+              <div>
+                <p className="text-[10px] font-black text-primary uppercase tracking-[0.25em] mb-1.5">Selected Focus</p>
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-tight max-w-[260px]">
+                  {selectedLocation.label || "San Fernando City, Pampanga"}
+                </h2>
               </div>
-              <p className="text-sm font-bold text-slate-700 leading-relaxed">{advisoryText}</p>
-              {nearbyReportedIncident && (
-                <p className="text-xs font-bold text-red-600 mt-1">
-                  Nearby reported {nearbyReportedIncident.incident.type} incident ({nearbyReportedIncident.distanceKm.toFixed(2)} km away)
-                </p>
-              )}
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Current Context: {incidentType} • {riskLevel}</p>
-            </div>
-          </div>
-        ) : activeTab === 'what-to-do' ? (
-          <div className="space-y-6 animate-in slide-in-from-right-8 duration-300">
-            <div className="flex items-center gap-4 mb-4">
-              <button onClick={() => setActiveTab('metrics')} className="p-2 -ml-2 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors">
-                <ChevronRight className="w-5 h-5 text-slate-500 rotate-180" />
+              <button
+                onClick={handleReset}
+                className="p-3 bg-red-50 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all active:scale-90"
+                title="Clear focus"
+              >
+                <X className="w-5 h-5 transition-transform group-hover:rotate-90" />
               </button>
-              <h3 className="text-2xl font-black text-slate-900 tracking-tight">
-                What To Do
-              </h3>
             </div>
+          )}
+        </div>
 
-            <div className="rounded-3xl border border-transparent p-6 space-y-6 bg-slate-50">
-              <div className="flex items-start justify-between gap-3 mb-2">
-                <div>
-                  <h4 className="text-xl font-black text-slate-900 mt-1">{riskLevel} Actions</h4>
-                  <p className="text-xs font-bold text-slate-500 mt-1">{contactLine.label} <span className="text-emerald-600">{contactLine.value}</span></p>
-                </div>
-                <Image src="/Risk Level LOGO.png" alt="Risk Level" width={64} height={64} className="object-contain" />
+        {/* Main Content (Emergency Metrics or Facilities) */}
+        <div className="p-8 pt-8 overflow-y-auto flex-1 custom-scrollbar">
+          {!selectedLocation ? (
+            <div className="flex flex-col items-center justify-center h-full text-center space-y-4 opacity-50">
+              <div className="w-16 h-16 bg-slate-100 rounded-3xl flex items-center justify-center">
+                <Search className="w-8 h-8 text-slate-300" />
               </div>
-
-              <div className="flex flex-wrap gap-2 bg-white p-1 rounded-xl border border-slate-100">
-                <button
-                  onClick={() => setManualIncidentType('Fire Incident')}
-                  disabled={Boolean(reportDrivenIncidentType)}
-                  className={`px-3 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-colors ${incidentType === 'Fire Incident' ? 'bg-red-500 text-white' : 'text-slate-500 hover:bg-slate-100'
-                    }`}
-                >
-                  Fire
-                </button>
-                <button
-                  onClick={() => setManualIncidentType('Health-Related Incident')}
-                  disabled={Boolean(reportDrivenIncidentType)}
-                  className={`px-3 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-colors ${incidentType === 'Health-Related Incident' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-100'
-                    }`}
-                >
-                  Health
-                </button>
-                <button
-                  onClick={() => setManualIncidentType('Flood Risk')}
-                  disabled={Boolean(reportDrivenIncidentType)}
-                  className={`px-3 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-colors ${incidentType === 'Flood Risk' ? 'bg-cyan-600 text-white' : 'text-slate-500 hover:bg-slate-100'
-                    }`}
-                >
-                  Flood
-                </button>
-                <button
-                  onClick={() => setManualIncidentType('Typhoon Risk')}
-                  disabled={Boolean(reportDrivenIncidentType)}
-                  className={`px-3 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-colors ${incidentType === 'Typhoon Risk' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-100'
-                    }`}
-                >
-                  Typhoon
-                </button>
+              <div>
+                <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Search to view risk level</p>
+                <p className="text-[10px] font-bold text-slate-300 uppercase mt-1">Real-time telemetry pending</p>
               </div>
-
-              {reportDrivenIncidentType && (
-                <p className="text-[11px] font-bold text-red-600">
-                  Incident type is auto-selected from nearby report at this address.
-                </p>
-              )}
+            </div>
+          ) : activeTab === 'facilities' ? (
+            <div className="space-y-6 animate-in slide-in-from-right-8 duration-300">
+              <div className="flex items-center gap-4 mb-8">
+                <button onClick={() => setActiveTab('metrics')} className="p-2 -ml-2 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors">
+                  <ChevronRight className="w-5 h-5 text-slate-500 rotate-180" />
+                </button>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight">
+                  Nearest Facilities
+                </h3>
+              </div>
 
               <div className="space-y-4">
-                {actionSteps.map((step, idx) => (
-                  <div key={`${incidentType}-${riskLevel}-${idx}`} className={`bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center gap-4 ${idx % 2 === 1 ? 'flex-row-reverse' : ''}`}>
-                    <div className="w-16 h-16 rounded-xl overflow-hidden bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
-                      {step.imagePath ? (
-                        <Image
-                          src={step.imagePath}
-                          alt={step.title}
-                          width={64}
-                          height={64}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        step.icon
-                      )}
-                    </div>
-
-                    <div className={`flex-1 ${idx % 2 === 1 ? 'text-right' : 'text-left'}`}>
-                      <p className="text-sm font-black text-slate-800 leading-tight">{step.title}</p>
-                      <p className="text-[11px] font-semibold text-slate-500 mt-1 leading-relaxed">{step.detail}</p>
+                {nearbyFacilities.map((est, idx) => (
+                  <div key={idx} className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm hover:shadow-md transition-all">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${est["Establishment Type"] === 'Healthcare Facility' ? 'bg-rose-50 text-rose-500' :
+                          est["Establishment Type"] === 'Emergency Service' ? 'bg-red-50 text-red-500' :
+                            'bg-blue-50 text-blue-500'
+                          }`}>
+                          {est["Establishment Type"] === 'Healthcare Facility' ? <Hospital className="w-6 h-6" /> :
+                            est["Establishment Type"] === 'Emergency Service' ? <Siren className="w-6 h-6" /> :
+                              <ShieldPlus className="w-6 h-6" />
+                          }
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-slate-900 leading-tight">{est.Name}</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{est["Establishment Type"]}</p>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-xs font-black text-emerald-600 tracking-tighter">{est.distance.toFixed(2)} km</p>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase mt-1 italic">Active Path</p>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="space-y-6 animate-in slide-in-from-left-8 duration-300">
-            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8">
-              Emergency Risk Level
-            </h3>
+          ) : activeTab === 'advisory' ? (
+            <div className="space-y-6 animate-in slide-in-from-right-8 duration-300">
+              <div className="flex items-center gap-4 mb-4">
+                <button onClick={() => setActiveTab('metrics')} className="p-2 -ml-2 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors">
+                  <ChevronRight className="w-5 h-5 text-slate-500 rotate-180" />
+                </button>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight">
+                  Response Insight
+                </h3>
+              </div>
 
-            <div className="space-y-5">
-              <RiskCard
-                icon={<Clock className="w-8 h-8" />}
-                title="Generated Response Time"
-                subtext={`${responseTimeMin} minutes`}
-                color="text-blue-600"
-                bgColor="bg-blue-50"
-                iconColor="text-blue-600"
-                accentColor="border-blue-500"
-                onClick={() => setActiveTab('advisory')}
-              />
-              <RiskCard
-                icon={<ShieldPlus className="w-8 h-8" />}
-                title="Risk Level"
-                subtext={`${riskLevel} - ${incidentType}`}
-                color="text-amber-600"
-                bgColor="bg-blue-50"
-                iconColor="text-blue-600"
-                accentColor="border-amber-500"
-                onClick={() => setActiveTab('what-to-do')}
-              />
-              <RiskCard
-                icon={<Siren className="w-8 h-8" />}
-                title="Nearest Facilities"
-                subtext="Ready for Dispatch"
-                color="text-slate-900"
-                bgColor="bg-white"
-                iconColor="text-red-500"
-                accentColor="border-red-500"
-                borderedIcon
-                onClick={() => setActiveTab('facilities')}
-              />
+              <div className="rounded-3xl border border-blue-100 bg-blue-50/70 p-6 space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <Image src="/Response Time LOGO.png" alt="Response Time" width={64} height={64} className="object-contain" />
+                </div>
+                <p className="text-sm font-bold text-slate-700 leading-relaxed">{advisoryText}</p>
+                {nearbyReportedIncident && (
+                  <p className="text-xs font-bold text-red-600 mt-1">
+                    Nearby reported {nearbyReportedIncident.incident.type} incident ({nearbyReportedIncident.distanceKm.toFixed(2)} km away)
+                  </p>
+                )}
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Current Context: {incidentType} • {riskLevel}</p>
+              </div>
             </div>
-          </div>
-        )}
+          ) : activeTab === 'what-to-do' ? (
+            <div className="space-y-6 animate-in slide-in-from-right-8 duration-300">
+              <div className="flex items-center gap-4 mb-4">
+                <button onClick={() => setActiveTab('metrics')} className="p-2 -ml-2 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors">
+                  <ChevronRight className="w-5 h-5 text-slate-500 rotate-180" />
+                </button>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight">
+                  What To Do
+                </h3>
+              </div>
+
+              <div className="rounded-3xl border border-transparent p-6 space-y-6 bg-slate-50">
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div>
+                    <h4 className="text-xl font-black text-slate-900 mt-1">{riskLevel} Actions</h4>
+                    <p className="text-xs font-bold text-slate-500 mt-1">{contactLine.label} <span className="text-emerald-600">{contactLine.value}</span></p>
+                  </div>
+                  <Image src="/Risk Level LOGO.png" alt="Risk Level" width={64} height={64} className="object-contain" />
+                </div>
+
+                <div className="flex flex-wrap gap-2 bg-white p-1 rounded-xl border border-slate-100">
+                  <button
+                    onClick={() => setManualIncidentType('Fire Incident')}
+                    className={`px-3 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-colors ${incidentType === 'Fire Incident' ? 'bg-red-500 text-white' : 'text-slate-500 hover:bg-slate-100'
+                      }`}
+                  >
+                    Fire
+                  </button>
+                  <button
+                    onClick={() => setManualIncidentType('Health-Related Incident')}
+                    className={`px-3 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-colors ${incidentType === 'Health-Related Incident' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-100'
+                      }`}
+                  >
+                    Health
+                  </button>
+                  <button
+                    onClick={() => setManualIncidentType('Flood Risk')}
+                    className={`px-3 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-colors ${incidentType === 'Flood Risk' ? 'bg-cyan-600 text-white' : 'text-slate-500 hover:bg-slate-100'
+                      }`}
+                  >
+                    Flood
+                  </button>
+                  <button
+                    onClick={() => setManualIncidentType('Typhoon Risk')}
+                    className={`px-3 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-colors ${incidentType === 'Typhoon Risk' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-100'
+                      }`}
+                  >
+                    Typhoon
+                  </button>
+                </div>
+
+                {reportDrivenIncidentType && (
+                  <p className="text-[11px] font-bold text-red-600">
+                    Incident type is auto-selected from nearby report at this address.
+                  </p>
+                )}
+
+                <div className="space-y-4">
+                  {actionSteps.map((step, idx) => (
+                    <div key={`${incidentType}-${riskLevel}-${idx}`} className={`bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center gap-4 ${idx % 2 === 1 ? 'flex-row-reverse' : ''}`}>
+                      <div className="w-16 h-16 rounded-xl overflow-hidden bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
+                        {step.imagePath ? (
+                          <Image
+                            src={step.imagePath}
+                            alt={step.title}
+                            width={64}
+                            height={64}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          step.icon
+                        )}
+                      </div>
+
+                      <div className={`flex-1 ${idx % 2 === 1 ? 'text-right' : 'text-left'}`}>
+                        <p className="text-sm font-black text-slate-800 leading-tight">{step.title}</p>
+                        <p className="text-[11px] font-semibold text-slate-500 mt-1 leading-relaxed">{step.detail}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6 animate-in slide-in-from-left-8 duration-300">
+              <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8">
+                Emergency Risk Level
+              </h3>
+
+              <div className="space-y-5">
+                <RiskCard
+                  icon={<Clock className="w-8 h-8" />}
+                  title="Generated Response Time"
+                  subtext={`${responseTimeMin} minutes`}
+                  color="text-blue-600"
+                  bgColor="bg-blue-50"
+                  iconColor="text-blue-600"
+                  accentColor="border-blue-500"
+                  onClick={() => setActiveTab('advisory')}
+                />
+                <RiskCard
+                  icon={<ShieldPlus className="w-8 h-8" />}
+                  title="Risk Level"
+                  subtext={`${riskLevel} - ${incidentType}`}
+                  color="text-amber-600"
+                  bgColor="bg-blue-50"
+                  iconColor="text-blue-600"
+                  accentColor="border-amber-500"
+                  onClick={() => setActiveTab('what-to-do')}
+                />
+                <RiskCard
+                  icon={<Siren className="w-8 h-8" />}
+                  title="Nearest Facilities"
+                  subtext="Ready for Dispatch"
+                  color="text-slate-900"
+                  bgColor="bg-white"
+                  iconColor="text-red-500"
+                  accentColor="border-red-500"
+                  borderedIcon
+                  onClick={() => setActiveTab('facilities')}
+                />
+                <RiskCard
+                  icon={<Waves className="w-8 h-8" />}
+                  title="Flood Risk Radar"
+                  subtext="Live NOAH Telemetry"
+                  color="text-blue-600"
+                  bgColor="bg-blue-50"
+                  iconColor="text-blue-500"
+                  accentColor="border-blue-500"
+                  onClick={() => onToggleRadar && onToggleRadar('flood')}
+                />
+                <RiskCard
+                  icon={<Wind className="w-8 h-8" />}
+                  title="Typhoon Risk Radar"
+                  subtext="Live NOAH Telemetry"
+                  color="text-red-600"
+                  bgColor="bg-red-50"
+                  iconColor="text-red-500"
+                  accentColor="border-red-500"
+                  onClick={() => onToggleRadar && onToggleRadar('typhoon')}
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -10,17 +10,23 @@ import {
   Wind,
   Navigation,
   AlertTriangle,
-  Hospital
+  Hospital,
+  Lock,
+  CheckCircle2,
+  Search as SearchIcon
 } from 'lucide-react';
 import { useAuth } from '../../src/context/AuthContext';
 import { Button } from '../UI/Button';
+import { SidebarSearch } from './SidebarSearch';
 
 interface HomeCardProps {
   onActionSelect: (action: 'report' | 'route' | 'facilities' | 'history' | 'flood' | 'typhoon') => void;
+  onLocationSelect?: (lat: number, lng: number, label: string) => void;
   isSidebar?: boolean;
+  hasLocation?: boolean;
 }
 
-export const HomeCard = ({ onActionSelect, isSidebar }: HomeCardProps) => {
+export const HomeCard = ({ onActionSelect, onLocationSelect, isSidebar, hasLocation }: HomeCardProps) => {
   const { profile, loading } = useAuth();
 
   return (
@@ -42,13 +48,26 @@ export const HomeCard = ({ onActionSelect, isSidebar }: HomeCardProps) => {
         </p>
       </div>
 
-        <div className="flex items-center justify-center p-4 bg-primary/5 rounded-2xl mx-8 mb-4 border border-primary/10">
-           <ShieldAlert className="w-4 h-4 text-primary mr-2" />
-           <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Select an action to begin</p>
+        <div className="px-8 mb-8">
+          <SidebarSearch onLocationSelect={onLocationSelect} />
+        </div>
+
+        <div className={`flex items-center justify-center p-4 rounded-2xl mx-8 mb-6 border transition-all duration-500 ${hasLocation ? 'bg-emerald-50 border-emerald-100' : 'bg-primary/5 border-primary/10'}`}>
+           {hasLocation ? (
+             <>
+               <CheckCircle2 className="w-4 h-4 text-emerald-600 mr-2 animate-in zoom-in duration-300" />
+               <p className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em]">Location Synchronized</p>
+             </>
+           ) : (
+             <>
+               <Lock className="w-4 h-4 text-primary mr-2" />
+               <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Enter address to unlock features</p>
+             </>
+           )}
         </div>
 
       {/* Beta Notice */}
-      <div className="px-8 mb-6">
+      <div className={`px-8 mb-6 transition-all duration-500 ${!hasLocation ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
         <div className="flex items-center justify-center gap-2 mb-4">
           <div className="h-px flex-1 bg-slate-100" />
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
@@ -64,24 +83,28 @@ export const HomeCard = ({ onActionSelect, isSidebar }: HomeCardProps) => {
             label="Flood Risk"
             color="bg-sky-500 text-white"
             onClick={() => onActionSelect('flood')}
+            disabled={!hasLocation}
           />
           <ActionButton
             icon={<Wind className="w-6 h-6" />}
             label="Typhoon"
             color="bg-indigo-500 text-white"
             onClick={() => onActionSelect('typhoon')}
+            disabled={!hasLocation}
           />
           <ActionButton
             icon={<Navigation className="w-6 h-6" />}
             label="Safe Route"
             color="bg-emerald-500 text-white"
             onClick={() => onActionSelect('route')}
+            disabled={!hasLocation}
           />
           <ActionButton
             icon={<AlertTriangle className="w-6 h-6" />}
             label="Report"
             color="bg-red-500 text-white"
             onClick={() => onActionSelect('report')}
+            disabled={!hasLocation}
           />
         </div>
       </div>
@@ -131,15 +154,17 @@ interface ActionButtonProps {
   label: string;
   color: string;
   onClick?: () => void;
+  disabled?: boolean;
 }
 
-function ActionButton({ icon, label, color, onClick }: ActionButtonProps) {
+function ActionButton({ icon, label, color, onClick, disabled }: ActionButtonProps) {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center gap-2 group"
+      disabled={disabled}
+      className={`flex flex-col items-center gap-2 group ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
     >
-      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-all group-hover:scale-110 active:scale-90 ${color}`}>
+      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-all ${disabled ? '' : 'group-hover:scale-110 active:scale-90'} ${color}`}>
         {icon}
       </div>
       <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter group-hover:text-slate-900 transition-colors">
