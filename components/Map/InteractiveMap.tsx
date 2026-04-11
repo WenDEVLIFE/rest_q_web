@@ -11,10 +11,14 @@ interface InteractiveMapProps {
   overlayMode: 'none' | 'flood' | 'typhoon' | 'route' | 'report' | 'explore' | 'emergency';
   reportPin?: { lat: number; lng: number } | null;
   searchPin?: { lat: number; lng: number; label?: string } | null;
-  focusPin?: { lat: number; lng: number } | null;
+  focusPin?: {
+    label: string; lat: number; lng: number
+  } | null;
   reportedIncidents?: Incident[];
   onMapClick?: (lat: number, lng: number) => void;
   onOverlayModeChange?: (mode: 'none' | 'flood' | 'typhoon' | 'route' | 'report' | 'explore' | 'emergency') => void;
+  forceTab?: 'metrics' | 'advisory' | 'what-to-do' | 'facilities';
+  forceOpen?: boolean;
 }
 
 // Custom DivIcons for different establishment types
@@ -130,14 +134,28 @@ const MapController = ({ focusPin }: { focusPin?: { lat: number, lng: number } |
 
 import { SidebarSearch } from '../User/SidebarSearch';
 import { RiskLevelPanel } from '../User/RiskLevelPanel';
+import { Loader2 } from 'lucide-react';
 
-export default function InteractiveMap({ overlayMode, reportPin, searchPin: externalSearchPin, focusPin, reportedIncidents, onMapClick, onOverlayModeChange }: InteractiveMapProps) {
+export default function InteractiveMap({
+  overlayMode,
+  reportPin,
+  searchPin: externalSearchPin,
+  focusPin,
+  reportedIncidents,
+  onMapClick,
+  onOverlayModeChange,
+  forceTab,
+  forceOpen
+}: InteractiveMapProps) {
+  const [isMounted, setIsMounted] = React.useState(false);
+  const mapContainerRef = React.useRef<HTMLDivElement>(null);
+
   // Center roughly to the establishments data
   const center: [number, number] = [15.0589, 120.6460];
   const [localSearchPin, setLocalSearchPin] = React.useState<{ lat: number, lng: number, label?: string } | null>(null);
 
-  // Use external search pin if provided, otherwise use local
-  const activeSearchPin = externalSearchPin || localSearchPin;
+  // Use global focus pin or external search pin if provided, otherwise use local
+  const activeSearchPin = focusPin || externalSearchPin || localSearchPin;
 
   const mapTilerKey = process.env.NEXT_PUBLIC_OPEN_MAPTILER_API_KEY;
   // Leaflet TileLayer strictly requires raster images (.png, .webp). Vector JSON styles will break the map rendering.
@@ -147,6 +165,24 @@ export default function InteractiveMap({ overlayMode, reportPin, searchPin: exte
   const handleLocationSelect = (lat: number, lng: number, label: string) => {
     setLocalSearchPin({ lat, lng, label });
   };
+
+  React.useEffect(() => {
+    setIsMounted(true);
+
+    // Explicit cleanup for the specific DOM node to prevent "Map container is being reused" errors
+    const container = mapContainerRef.current || L.DomUtil.get('res-q-map-container');
+    if (container) {
+      // @ts-ignore
+      container._leaflet_id = null;
+    }
+
+    return () => {
+      if (container) {
+        // @ts-ignore
+        container._leaflet_id = null;
+      }
+    };
+  }, []);
 
   const handleReset = () => {
     setLocalSearchPin(null);
@@ -169,9 +205,22 @@ export default function InteractiveMap({ overlayMode, reportPin, searchPin: exte
     [15.0812, 120.6618], // Ricardo P. Rodriguez Hospital
   ];
 
+  if (!isMounted) {
+    return (
+      <div className="absolute inset-0 w-full h-full bg-slate-100 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    );
+  }
+
   return (
-    <div className="absolute inset-0 w-full h-full z-0">
+    <div
+      ref={mapContainerRef}
+      id="res-q-map-container"
+      className="absolute inset-0 w-full h-full z-0"
+    >
       <MapContainer
+        key="res-q-interactive-map"
         center={center}
         zoom={13}
         scrollWheelZoom={true}
@@ -285,6 +334,8 @@ export default function InteractiveMap({ overlayMode, reportPin, searchPin: exte
           onReset={handleReset}
           reportedIncidents={reportedIncidents}
           onToggleRadar={(type) => onOverlayModeChange && onOverlayModeChange(type as any)}
+          forceTab={forceTab}
+          forceOpen={forceOpen}
         />
       </div>
     </div>

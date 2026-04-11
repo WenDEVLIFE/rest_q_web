@@ -16,7 +16,6 @@ import { HomeCard } from '../components/User/HomeCard';
 import { IncidentReporter, IncidentReportPayload } from '../components/User/IncidentReporter';
 import { IncidentHistory } from '../components/User/IncidentHistory';
 import { RouteNavigation } from '../components/User/RouteNavigation';
-import { FacilityLocator } from '../components/User/FacilityLocator';
 import { APP_ROUTES } from '../src/constants/routes';
 import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
@@ -39,7 +38,9 @@ export default function Home() {
   const [activeView, setActiveView] = useState<'home' | 'report' | 'route' | 'facilities' | 'history'>('home');
   const [overlayMode, setOverlayMode] = useState<'none' | 'flood' | 'typhoon' | 'route' | 'report' | 'explore' | 'emergency'>('none');
   const [reportPin, setReportPin] = useState<{ lat: number, lng: number } | null>(null);
-  const [focusPin, setFocusPin] = useState<{ lat: number, lng: number } | null>(null);
+  const [focusPin, setFocusPin] = useState<{ lat: number, lng: number, label: string } | null>(null);
+  const [mapPanelTab, setMapPanelTab] = useState<'metrics' | 'advisory' | 'what-to-do' | 'facilities' | undefined>(undefined);
+  const [isMapPanelOpen, setIsMapPanelOpen] = useState(false);
   const [mapIncidents, setMapIncidents] = useState<Incident[]>([]);
   const [userIncidents, setUserIncidents] = useState<Incident[]>([]);
   const [historyIncidents, setHistoryIncidents] = useState<Incident[]>([]);
@@ -131,6 +132,13 @@ export default function Home() {
       // Update overlay mode to match the active view for routing/reporting map features
       if (action === 'report' || action === 'route') {
         setOverlayMode(action as any);
+      } else if (action === 'facilities' && focusPin) {
+        // Advanced GIS Journey: Auto-open the Place Sheet on the map instead of separate page
+        setActiveView('home');
+        setOverlayMode('none');
+        setMapPanelTab('facilities');
+        setIsMapPanelOpen(true);
+        return;
       } else {
         setOverlayMode('none');
       }
@@ -160,7 +168,7 @@ export default function Home() {
   };
 
   // Determines whether the side panel is docked to the left (true) or centered (false)
-  const isMapActive = (activeView !== 'home' && activeView !== 'history') || overlayMode !== 'none';
+  const isMapActive = (activeView !== 'home' && activeView !== 'history') || overlayMode !== 'none' || isMapPanelOpen;
 
   const renderActiveView = () => {
     switch (activeView) {
@@ -168,13 +176,11 @@ export default function Home() {
         return <IncidentReporter onClose={() => setActiveView('home')} onReport={handleIncidentReport} reportPin={reportPin} reportedIncidents={userIncidents} />;
       case 'route':
         return <RouteNavigation onClose={() => setActiveView('home')} />;
-      case 'facilities':
-        return <FacilityLocator onClose={() => setActiveView('home')} onLocationSelect={(lat, lng) => setFocusPin({ lat, lng })} />;
       case 'history':
         return <IncidentHistory onClose={() => setActiveView('home')} incidents={historyForCurrentUser} />;
       default:
-        // If it's a full-screen NOAH mode overlay, we don't render the HomeCard side panel
-        if (overlayMode === 'flood' || overlayMode === 'typhoon') {
+        // If it's a full-screen NOAH mode overlay OR the map panel is open, we don't render the HomeCard side panel
+        if (overlayMode === 'flood' || overlayMode === 'typhoon' || isMapPanelOpen) {
           return null;
         }
 
@@ -185,7 +191,9 @@ export default function Home() {
                 onActionSelect={handleActionSelect}
                 isSidebar={isMapActive}
                 hasLocation={Boolean(focusPin)}
-                onLocationSelect={(lat, lng, label) => setFocusPin({ lat, lng })}
+                onLocationSelect={(lat, lng, label) => setFocusPin({ lat, lng, label })}
+                onEmergencyMap={handleEmergencyMapClick}
+                focusPinLabel={focusPin?.label}
               />
             </div>
           </div>
@@ -198,18 +206,16 @@ export default function Home() {
     <div className="relative min-h-screen w-full flex flex-col font-inter overflow-hidden bg-slate-200">
       {/* Background Layer: Static Image or Interactive Map */}
       <div className="absolute inset-0 z-0">
-        <div 
-          className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-1000 scale-105 ${
-            (activeView === 'home' || activeView === 'history') && overlayMode === 'none' ? 'opacity-100' : 'opacity-0 pointer-events-none'
-          }`}
+        <div
+          className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-1000 scale-105 ${!isMapActive ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
           style={{ backgroundImage: "url('/map.jpg')" }}
         >
           <div className="absolute inset-0 bg-slate-900/10 backdrop-blur-[1px]" />
         </div>
-        
-        <div className={`absolute inset-0 transition-opacity duration-1000 ${
-          (activeView === 'home' || activeView === 'history') && overlayMode === 'none' ? 'opacity-0 pointer-events-none' : 'opacity-100'
-        }`}>
+
+        <div className={`absolute inset-0 transition-opacity duration-1000 ${!isMapActive ? 'opacity-0 pointer-events-none' : 'opacity-100'
+          }`}>
           <InteractiveMap
             overlayMode={overlayMode}
             reportPin={reportPin}
@@ -217,12 +223,14 @@ export default function Home() {
             reportedIncidents={mapIncidents}
             onMapClick={(lat, lng) => setReportPin({ lat, lng })}
             onOverlayModeChange={(mode) => setOverlayMode(mode)}
+            forceTab={mapPanelTab}
+            forceOpen={isMapPanelOpen}
           />
         </div>
       </div>
 
       {/* Modern Blur Overlay: ONLY for Home/History view with static background to make content pop */}
-      {(activeView === 'home' || activeView === 'history') && overlayMode === 'none' && (
+      {!isMapActive && (
         <div className="absolute inset-0 bg-white/20 backdrop-blur-md pointer-events-none z-10 transition-all duration-500" />
       )}
 
@@ -243,12 +251,7 @@ export default function Home() {
 
         <div className="flex items-center gap-6">
           <nav className="hidden md:flex items-center gap-8">
-            <button
-              onClick={handleEmergencyMapClick}
-              className="text-sm font-black text-slate-900 hover:text-primary transition-colors"
-            >
-              Emergency Map
-            </button>
+            {/* Navigation moved to HomeCard menu */}
           </nav>
 
           <div className="flex items-center gap-3 pl-6 border-l border-slate-900/10">
@@ -290,14 +293,18 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Floating Radar Controls (Flood/Typhoon only) or Back Button (Emergency) */}
-      {isFullScreenNoahMode && (
-        overlayMode === 'emergency' ? (
+      {/* Floating Radar Controls (Flood/Typhoon only) or Back Button (Map Panel/Emergency) */}
+      {(isFullScreenNoahMode || isMapPanelOpen) && (
+        (overlayMode === 'emergency' || isMapPanelOpen) ? (
           <button
-            onClick={() => setOverlayMode('none')}
-            className="absolute top-24 left-8 z-[1000] px-6 py-3 bg-white/90 backdrop-blur-xl border border-slate-200 text-slate-900 rounded-2xl shadow-xl flex items-center gap-3 font-black text-xs uppercase tracking-widest hover:bg-white transition-all active:scale-95 group"
+            onClick={() => {
+              setOverlayMode('none');
+              setIsMapPanelOpen(false);
+              setMapPanelTab(undefined);
+            }}
+            className="absolute top-24 left-8 z-[1000] px-6 py-4 bg-white/90 backdrop-blur-xl border border-slate-200 text-slate-900 rounded-[24px] shadow-2xl flex items-center gap-3 font-black text-xs uppercase tracking-widest hover:bg-white hover:border-primary/30 transition-all active:scale-95 group"
           >
-            <ChevronRight className="w-5 h-5 rotate-180 text-primary" />
+            <ChevronRight className="w-5 h-5 rotate-180 text-primary group-hover:-translate-x-1 transition-transform" />
             Back to Home
           </button>
         ) : (

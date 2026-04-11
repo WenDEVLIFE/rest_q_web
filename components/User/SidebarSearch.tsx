@@ -12,12 +12,20 @@ import { getAddressSuggestions, GeocodingResult } from '../../src/service/Map_Se
 interface SidebarSearchProps {
   onLocationSelect?: (lat: number, lng: number, label: string) => void;
   onReset?: () => void;
+  initialValue?: string;
 }
 
-export const SidebarSearch = ({ onLocationSelect, onReset }: SidebarSearchProps) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [suggestions, setSuggestions] = useState<GeocodingResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+export const SidebarSearch = ({ onLocationSelect, onReset, initialValue }: SidebarSearchProps) => {
+  const [searchQuery, setSearchQuery] = React.useState(initialValue || '');
+  const [suggestions, setSuggestions] = React.useState<GeocodingResult[]>([]);
+  const [isSearching, setIsSearching] = React.useState(false);
+
+  // Sync internal search state with external value Changes
+  React.useEffect(() => {
+    if (initialValue !== undefined) {
+      setSearchQuery(initialValue);
+    }
+  }, [initialValue]);
 
   const handleSearchChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;

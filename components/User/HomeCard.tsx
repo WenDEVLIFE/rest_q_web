@@ -13,6 +13,7 @@ import {
   Hospital,
   Lock,
   CheckCircle2,
+  Activity,
   Search as SearchIcon
 } from 'lucide-react';
 import { useAuth } from '../../src/context/AuthContext';
@@ -24,9 +25,11 @@ interface HomeCardProps {
   onLocationSelect?: (lat: number, lng: number, label: string) => void;
   isSidebar?: boolean;
   hasLocation?: boolean;
+  onEmergencyMap?: () => void;
+  focusPinLabel?: string;
 }
 
-export const HomeCard = ({ onActionSelect, onLocationSelect, isSidebar, hasLocation }: HomeCardProps) => {
+export const HomeCard = ({ onActionSelect, onLocationSelect, isSidebar, hasLocation, onEmergencyMap, focusPinLabel }: HomeCardProps) => {
   const { profile, loading } = useAuth();
 
   return (
@@ -49,7 +52,7 @@ export const HomeCard = ({ onActionSelect, onLocationSelect, isSidebar, hasLocat
       </div>
 
         <div className="px-8 mb-8">
-          <SidebarSearch onLocationSelect={onLocationSelect} />
+          <SidebarSearch onLocationSelect={onLocationSelect} initialValue={focusPinLabel} />
         </div>
 
         <div className={`flex items-center justify-center p-4 rounded-2xl mx-8 mb-6 border transition-all duration-500 ${hasLocation ? 'bg-emerald-50 border-emerald-100' : 'bg-primary/5 border-primary/10'}`}>
@@ -112,19 +115,42 @@ export const HomeCard = ({ onActionSelect, onLocationSelect, isSidebar, hasLocat
       {/* Bottom Footer Action */}
       <div className="bg-slate-50/80 p-6 flex-1 flex flex-col gap-3 border-t border-slate-100 overflow-y-auto min-h-0">
         <button
-          onClick={() => onActionSelect('facilities')}
-          className="group flex items-center justify-between w-full p-4 bg-white border border-slate-200 rounded-2xl hover:border-primary/30 transition-all shadow-sm active:scale-[0.98]"
+          onClick={onEmergencyMap}
+          className="group flex items-center justify-between w-full p-4 bg-primary text-white rounded-2xl hover:bg-sky-700 transition-all shadow-lg shadow-primary/20 active:scale-[0.98]"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-rose-50 rounded-xl flex items-center justify-center text-rose-500 group-hover:bg-rose-500 group-hover:text-white transition-colors">
+            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+              <Activity className="w-5 h-5" />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-black uppercase tracking-wider">Emergency Map Explorer</p>
+              <p className="text-[10px] font-bold opacity-70 uppercase tracking-tighter italic">Live Hazard Telemetry</p>
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 opacity-50 group-hover:translate-x-1 transition-all" />
+        </button>
+
+        <button
+          onClick={() => onActionSelect('facilities')}
+          disabled={!hasLocation}
+          className={`group flex items-center justify-between w-full p-4 border rounded-2xl transition-all shadow-sm active:scale-[0.98] ${
+            !hasLocation 
+              ? 'bg-slate-50 border-slate-100 cursor-not-allowed grayscale opacity-60' 
+              : 'bg-white border-slate-200 hover:border-primary/30'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+              !hasLocation ? 'bg-slate-200 text-slate-400' : 'bg-rose-50 text-rose-500 group-hover:bg-rose-500 group-hover:text-white'
+            }`}>
               <Hospital className="w-5 h-5" />
             </div>
             <div className="text-left">
-              <p className="text-sm font-black text-slate-900 group-hover:text-primary transition-colors">Nearest Facilities</p>
+              <p className={`text-sm font-black transition-colors ${!hasLocation ? 'text-slate-400' : 'text-slate-900 group-hover:text-primary'}`}>Nearest Facilities</p>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Hospitals, Fire, Police</p>
             </div>
           </div>
-          <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+          <ChevronRight className={`w-5 h-5 transition-all ${!hasLocation ? 'text-slate-200' : 'text-slate-300 group-hover:text-primary group-hover:translate-x-1'}`} />
         </button>
 
         {profile && (

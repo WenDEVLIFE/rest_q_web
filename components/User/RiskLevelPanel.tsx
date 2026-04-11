@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Search,
   Clock,
@@ -35,6 +35,8 @@ interface RiskLevelPanelProps {
   selectedLocation?: { lat: number; lng: number; label?: string } | null;
   reportedIncidents?: Incident[];
   onToggleRadar?: (type: 'flood' | 'typhoon') => void;
+  forceTab?: 'metrics' | 'advisory' | 'what-to-do' | 'facilities';
+  forceOpen?: boolean;
 }
 
 type IncidentCategory = 'Fire Incident' | 'Health-Related Incident' | 'Flood Risk' | 'Typhoon Risk';
@@ -60,10 +62,19 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
   return d;
 };
 
-export const RiskLevelPanel = ({ onLocationSelect, onReset, selectedLocation, reportedIncidents = [], onToggleRadar }: RiskLevelPanelProps) => {
+export const RiskLevelPanel = ({ onLocationSelect, onReset, selectedLocation, reportedIncidents = [], onToggleRadar, forceTab, forceOpen }: RiskLevelPanelProps) => {
   const [activeTab, setActiveTab] = useState<'metrics' | 'advisory' | 'what-to-do' | 'facilities'>('metrics');
   const [manualIncidentType, setManualIncidentType] = useState<IncidentCategory>('Fire Incident');
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
+
+  // Sync with external control props
+  useEffect(() => {
+    if (forceTab) setActiveTab(forceTab);
+  }, [forceTab]);
+
+  useEffect(() => {
+    if (forceOpen) setIsCollapsed(false);
+  }, [forceOpen]);
 
   const nearestReportedIncident = useMemo(() => {
     if (!selectedLocation || reportedIncidents.length === 0) return null;
@@ -493,7 +504,11 @@ export const RiskLevelPanel = ({ onLocationSelect, onReset, selectedLocation, re
       <div className="w-full h-full flex flex-col overflow-hidden rounded-[40px]">
         {/* Unified Header with Search */}
         <div className="p-8 pb-6 border-b border-slate-100/50 bg-white/50 backdrop-blur-md">
-          <SidebarSearch onLocationSelect={onLocationSelect} onReset={handleReset} />
+          <SidebarSearch 
+            onLocationSelect={onLocationSelect} 
+            onReset={handleReset} 
+            initialValue={selectedLocation?.label} 
+          />
 
           {selectedLocation && activeTab !== 'facilities' && (
             <div className="mt-8 flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-500">
