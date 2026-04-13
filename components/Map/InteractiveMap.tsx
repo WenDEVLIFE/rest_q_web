@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, Polygon, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import establishmentsData from '../../public/establishment.json';
 import { Incident } from '../../src/types/incident';
@@ -20,6 +20,140 @@ interface InteractiveMapProps {
   forceTab?: 'metrics' | 'advisory' | 'what-to-do' | 'facilities';
   forceOpen?: boolean;
 }
+
+type FloodTileLevel = 'low' | 'medium' | 'high';
+
+interface FloodTile {
+  positions: [number, number][];
+  level: FloodTileLevel;
+}
+
+const floodHeatColors: Record<FloodTileLevel, { fill: string; stroke: string; opacity: number }> = {
+  low: { fill: '#FDE047', stroke: '#FBBF24', opacity: 0.42 },
+  medium: { fill: '#F97316', stroke: '#FB923C', opacity: 0.5 },
+  high: { fill: '#EF4444', stroke: '#F87171', opacity: 0.58 },
+};
+
+const pampangaBounds = {
+  south: 14.80,
+  north: 15.25,
+  west: 120.39,
+  east: 120.86,
+};
+
+const floodInfluenceCenters: Array<{ lat: number; lng: number; weight: number }> = [
+  { lat: 15.0333, lng: 120.6833, weight: 1.0 },
+  { lat: 15.1450, lng: 120.5850, weight: 0.92 },
+  { lat: 15.2160, lng: 120.6520, weight: 0.88 },
+  { lat: 15.1020, lng: 120.7300, weight: 0.84 },
+  { lat: 14.9500, lng: 120.6400, weight: 0.78 },
+];
+
+const floodCorridors: Array<[[number, number], [number, number]]> = [
+  [[14.86, 120.44], [15.22, 120.80]],
+  [[14.92, 120.40], [15.18, 120.72]],
+  [[14.84, 120.56], [15.24, 120.62]],
+];
+
+const createTile = (centerLat: number, centerLng: number, sizeLat: number, sizeLng: number): [number, number][] => {
+  const halfLat = sizeLat / 2;
+  const halfLng = sizeLng / 2;
+
+  return [
+    [centerLat - halfLat, centerLng - halfLng],
+    [centerLat - halfLat, centerLng + halfLng],
+    [centerLat + halfLat, centerLng + halfLng],
+    [centerLat + halfLat, centerLng - halfLng],
+  ];
+};
+
+const distanceToSegmentKm = (
+  pointLat: number,
+  pointLng: number,
+  start: [number, number],
+  end: [number, number]
+) => {
+  const toMeters = (lat: number, lng: number) => {
+    const metersPerLat = 111320;
+    const metersPerLng = 111320 * Math.cos((lat * Math.PI) / 180);
+    return { x: lng * metersPerLng, y: lat * metersPerLat };
+  };
+
+  const point = toMeters(pointLat, pointLng);
+  const startPoint = toMeters(start[0], start[1]);
+  const endPoint = toMeters(end[0], end[1]);
+
+  const segmentX = endPoint.x - startPoint.x;
+  const segmentY = endPoint.y - startPoint.y;
+  const segmentLengthSquared = segmentX * segmentX + segmentY * segmentY;
+
+  if (segmentLengthSquared === 0) {
+    const dx = point.x - startPoint.x;
+    const dy = point.y - startPoint.y;
+    return Math.sqrt(dx * dx + dy * dy) / 1000;
+  }
+
+  const projection = Math.max(
+    0,
+    Math.min(
+      1,
+      ((point.x - startPoint.x) * segmentX + (point.y - startPoint.y) * segmentY) / segmentLengthSquared
+    )
+  );
+
+  const closestX = startPoint.x + projection * segmentX;
+  const closestY = startPoint.y + projection * segmentY;
+  const dx = point.x - closestX;
+  const dy = point.y - closestY;
+
+  return Math.sqrt(dx * dx + dy * dy) / 1000;
+};
+
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
+const floodTiles: FloodTile[] = (() => {
+  const tiles: FloodTile[] = [];
+  const latStep = 0.0125;
+  const lngStep = 0.0125;
+
+  for (let lat = pampangaBounds.south; lat <= pampangaBounds.north; lat += latStep) {
+    for (let lng = pampangaBounds.west; lng <= pampangaBounds.east; lng += lngStep) {
+      const corridorDistance = Math.min(
+        ...floodCorridors.map(([start, end]) => distanceToSegmentKm(lat, lng, start, end))
+      );
+
+      const centerInfluence = floodInfluenceCenters.reduce((strongest, center) => {
+        const distance = calculateDistance(lat, lng, center.lat, center.lng);
+        const influence = Math.max(0, 1 - distance / 24) * center.weight;
+        return Math.max(strongest, influence);
+      }, 0);
+
+      const provincialGradient = Math.max(0, 1 - calculateDistance(lat, lng, 15.05, 120.64) / 85) * 0.4;
+      const patternNoise = (Math.sin(lat * 46 + lng * 2.5) + Math.cos(lng * 39 - lat * 3.8)) * 0.11;
+      const intensity = Math.max(0, 1 - corridorDistance / 8.5) * 0.5 + centerInfluence * 0.55 + provincialGradient + patternNoise;
+
+      if (intensity < 0.12) continue;
+
+      const level: FloodTileLevel = intensity > 0.66 ? 'high' : intensity > 0.43 ? 'medium' : 'low';
+      tiles.push({
+        level,
+        positions: createTile(lat, lng, 0.0126, 0.0126), // Size matches step exactly + tiny overlap for seamless transition
+      });
+    }
+  }
+
+  return tiles;
+})();
 
 // Custom DivIcons for different establishment types
 // Memoize / cache icons to avoid lag on every render
@@ -157,42 +291,19 @@ export default function InteractiveMap({
   // Use global focus pin or external search pin if provided, otherwise use local
   const activeSearchPin = focusPin || externalSearchPin || localSearchPin;
 
+  const openWeatherAPIKey = process.env.NEXT_PUBLIC_OPEN_WEATHER_API_KEY;
   const mapTilerKey = process.env.NEXT_PUBLIC_OPEN_MAPTILER_API_KEY;
-  // Leaflet TileLayer strictly requires raster images (.png, .webp). Vector JSON styles will break the map rendering.
-  const tileUrl = `https://tile.openstreetmap.org/{z}/{x}/{y}.png`;
+  // Use MapTiler Topo V2 to explicitly highlight rivers and natural terrain as requested
+  const tileUrl = `https://api.maptiler.com/maps/topo-v2/256/{z}/{x}/{y}.png?key=${mapTilerKey}`;
   const attribution = '&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; OpenStreetMap contributors';
 
   const handleLocationSelect = (lat: number, lng: number, label: string) => {
     setLocalSearchPin({ lat, lng, label });
   };
 
-  React.useEffect(() => {
-    setIsMounted(true);
-
-    // Explicit cleanup for the specific DOM node to prevent "Map container is being reused" errors
-    const container = mapContainerRef.current || L.DomUtil.get('res-q-map-container');
-    if (container) {
-      // @ts-ignore
-      container._leaflet_id = null;
-    }
-
-    return () => {
-      if (container) {
-        // @ts-ignore
-        container._leaflet_id = null;
-      }
-    };
-  }, []);
-
   const handleReset = () => {
     setLocalSearchPin(null);
   };
-
-  // Simulated Flood Risk Data (Circles covering specific areas in San Fernando)
-  const floodZones = [
-    { center: [15.0450, 120.6550], radius: 1200, color: '#3b82f6' },
-    { center: [15.0750, 120.6400], radius: 1800, color: '#0284c7' },
-  ];
 
   // Simulated Typhoon Path (Polyline and large radius)
   const typhoonCenter: [number, number] = [14.9500, 120.8000];
@@ -205,17 +316,8 @@ export default function InteractiveMap({
     [15.0812, 120.6618], // Ricardo P. Rodriguez Hospital
   ];
 
-  if (!isMounted) {
-    return (
-      <div className="absolute inset-0 w-full h-full bg-slate-100 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-      </div>
-    );
-  }
-
   return (
     <div
-      ref={mapContainerRef}
       id="res-q-map-container"
       className="absolute inset-0 w-full h-full z-0"
     >
@@ -253,25 +355,47 @@ export default function InteractiveMap({
           </Marker>
         ))}
 
-        {/* --- OVERLAYS --- */}
+        {/* === LIVE TELEMETRY OVERLAYS === */}
 
-        {/* Flood Overlay */}
-        {(overlayMode === 'flood' || overlayMode === 'emergency') && floodZones.map((zone, idx) => (
-          <Circle
-            key={idx}
-            center={zone.center as [number, number]}
-            radius={zone.radius}
-            pathOptions={{ fillColor: zone.color, fillOpacity: 0.4, color: zone.color, weight: 1 }}
-          />
-        ))}
+        {/* Flood Overlay (Simulated NOAH Hazard Zones) */}
+        {(overlayMode === 'flood' || overlayMode === 'emergency') && (
+          <>
+            {floodTiles.map((tile, index) => {
+              const tileStyle = floodHeatColors[tile.level];
 
-        {/* Typhoon Overlay */}
+              return (
+                <Polygon
+                  key={`flood-tile-${index}`}
+                  positions={tile.positions}
+                  pathOptions={{
+                    fillColor: tileStyle.fill,
+                    fillOpacity: tileStyle.opacity,
+                    color: "transparent",
+                    weight: 0,
+                  }}
+                />
+              );
+            })}
+          </>
+        )}
+
+        {/* Typhoon Overlay (OpenWeatherMap Wind + Simulated Eye) */}
         {(overlayMode === 'typhoon' || overlayMode === 'emergency') && (
-          <Circle
-            center={typhoonCenter}
-            radius={typhoonRadius}
-            pathOptions={{ fillColor: '#ef4444', fillOpacity: 0.2, color: '#dc2626', weight: 2, dashArray: '10, 10' }}
-          />
+          <>
+            {openWeatherAPIKey && (
+              <TileLayer
+                key="owm-wind"
+                url={`https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${openWeatherAPIKey}`}
+                opacity={0.6}
+                attribution='&copy; <a href="https://openweathermap.org/">OpenWeatherMap</a>'
+              />
+            )}
+            <Circle
+              center={typhoonCenter}
+              radius={typhoonRadius}
+              pathOptions={{ fillColor: '#ef4444', fillOpacity: 0.2, color: '#dc2626', weight: 2, dashArray: '10, 10' }}
+            />
+          </>
         )}
 
         {/* Route Overlay */}
@@ -325,6 +449,30 @@ export default function InteractiveMap({
           </Marker>
         )}
       </MapContainer>
+
+      {/* --- HAZARD LEGEND OVERLAY --- */}
+      {(overlayMode === 'flood' || overlayMode === 'typhoon') && (
+        <div className="absolute bottom-8 left-8 z-[1000] bg-white/95 backdrop-blur-md p-4 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] border border-slate-100 font-inter min-w-[130px] animate-in fade-in zoom-in duration-300">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-xs font-black uppercase text-slate-800 tracking-wider">Flood Tiles</h4>
+            <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="w-6 h-6 rounded-[6px] bg-[#FDE047] shadow-sm border border-[#FBBF24]/60 flex-shrink-0"></div>
+              <span className="text-sm font-medium text-[#FBBF24]">Low</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-6 h-6 rounded-[6px] bg-[#F97316] shadow-sm border border-[#FB923C]/60 flex-shrink-0"></div>
+              <span className="text-sm font-medium text-[#EA580C]">Medium</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-6 h-6 rounded-[6px] bg-[#EF4444] shadow-sm border border-[#F87171]/60 flex-shrink-0"></div>
+              <span className="text-sm font-medium text-[#DC2626]">High</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* --- FLOATING UI OVERLAYS --- */}
       <div className="absolute top-24 right-8 bottom-24 z-[1001] w-full max-w-[450px] pointer-events-auto flex flex-col justify-center animate-in slide-in-from-right-8 duration-500">

@@ -124,8 +124,14 @@ export default function Home() {
 
   const handleActionSelect = (action: string) => {
     if (action === 'flood' || action === 'typhoon') {
-      // Toggle overlay mode without leaving home view
-      setOverlayMode(prev => prev === action ? 'none' : action as any);
+      // Toggle overlay mode and auto-open the map panel for context
+      const newMode = overlayMode === action ? 'none' : action as any;
+      setOverlayMode(newMode);
+      
+      if (newMode !== 'none') {
+        setIsMapPanelOpen(true);
+        // We stay in 'home' view but the map panel slides in
+      }
     } else {
       setActiveView(action as any);
 
@@ -162,9 +168,10 @@ export default function Home() {
 
   const handleEmergencyMapClick = () => {
     setActiveView('home');
-    setOverlayMode('emergency');
+    setOverlayMode('none');
     setFocusPin(null);
     setReportPin(null);
+    setIsMapPanelOpen(true);
   };
 
   // Determines whether the side panel is docked to the left (true) or centered (false)

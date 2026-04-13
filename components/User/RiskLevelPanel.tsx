@@ -21,7 +21,9 @@ import {
   Stethoscope,
   Flame,
   HeartPulse,
-  Hospital
+  Hospital,
+  Thermometer,
+  Cloud
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -66,6 +68,28 @@ export const RiskLevelPanel = ({ onLocationSelect, onReset, selectedLocation, re
   const [activeTab, setActiveTab] = useState<'metrics' | 'advisory' | 'what-to-do' | 'facilities'>('metrics');
   const [manualIncidentType, setManualIncidentType] = useState<IncidentCategory>('Fire Incident');
   const [isCollapsed, setIsCollapsed] = useState(true);
+  const [weatherData, setWeatherData] = useState<any>(null);
+
+  // Fetch Live Weather when a location is selected
+  useEffect(() => {
+    if (!selectedLocation) {
+      setWeatherData(null);
+      return;
+    }
+    const fetchWeather = async () => {
+      try {
+        const apiKey = process.env.NEXT_PUBLIC_OPEN_WEATHER_API_KEY;
+        if (!apiKey) return;
+        const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${selectedLocation.lat}&lon=${selectedLocation.lng}&appid=${apiKey}&units=metric`);
+        if (!res.ok) throw new Error('Weather fetch failed');
+        const data = await res.json();
+        setWeatherData(data);
+      } catch (err) {
+        console.error("Failed to fetch location weather", err);
+      }
+    };
+    fetchWeather();
+  }, [selectedLocation]);
 
   // Sync with external control props
   useEffect(() => {
@@ -745,6 +769,40 @@ export const RiskLevelPanel = ({ onLocationSelect, onReset, selectedLocation, re
                   accentColor="border-red-500"
                   onClick={() => onToggleRadar && onToggleRadar('typhoon')}
                 />
+
+                {/* --- REAL-TIME WEATHER FORECAST WIDGET --- */}
+                {weatherData && (
+                  <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-[28px] p-6 shadow-lg relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                      <Cloud className="w-24 h-24 text-white" />
+                    </div>
+                    <div className="relative z-10 flex flex-col justify-between h-full space-y-4">
+                      <div>
+                        <p className="text-[10px] font-black tracking-[0.2em] uppercase text-slate-400 mb-1 flex items-center gap-2">
+                          <MapPin className="w-3 h-3 text-emerald-400" /> Live Environment
+                        </p>
+                        <h4 className="text-xl font-bold text-white capitalize">{weatherData.weather[0]?.description}</h4>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 mt-2">
+                        <div className="flex flex-col bg-white/5 rounded-xl p-3 border border-white/5">
+                          <div className="flex items-center gap-1.5 mb-1 text-slate-300">
+                            <Thermometer className="w-3.5 h-3.5" />
+                            <span className="text-[9px] uppercase tracking-wider font-bold">Temp</span>
+                          </div>
+                          <span className="text-lg font-black text-white">{Math.round(weatherData.main.temp)}°C</span>
+                        </div>
+                        <div className="flex flex-col bg-white/5 rounded-xl p-3 border border-white/5">
+                          <div className="flex items-center gap-1.5 mb-1 text-slate-300">
+                            <Wind className="w-3.5 h-3.5" />
+                            <span className="text-[9px] uppercase tracking-wider font-bold">Wind</span>
+                          </div>
+                          <span className="text-lg font-black text-white">{weatherData.wind.speed} m/s</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
               </div>
             </div>
           )}
