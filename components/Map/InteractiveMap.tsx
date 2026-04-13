@@ -309,7 +309,13 @@ export default function InteractiveMap({
   onLocationSelect
 }: InteractiveMapProps) {
   const [isMounted, setIsMounted] = React.useState(false);
-  const [liveTyphoon, setLiveTyphoon] = React.useState<{ lat: number, lng: number, name: string, speed: number } | null>(null);
+  const [liveTyphoon, setLiveTyphoon] = React.useState<{ 
+    lat: number, 
+    lng: number, 
+    name: string, 
+    speed: number,
+    forecastPath?: [number, number][]
+  } | null>(null);
   const [stormFocusTrigger, setStormFocusTrigger] = React.useState<[number, number] | null>(null);
   const mapContainerRef = React.useRef<HTMLDivElement>(null);
 
@@ -364,8 +370,11 @@ export default function InteractiveMap({
     setLocalSearchPin(null);
   };
 
-  // Simulated Typhoon Path fallback if no live data is active
-  const typhoonCenter: [number, number] = liveTyphoon ? [liveTyphoon.lat, liveTyphoon.lng] : [14.9500, 120.8000];
+  const forecastPath = liveTyphoon?.forecastPath || [];
+  // Ensure the eye is ALWAYS the start of the path to prevent "stray lines"
+  const typhoonCenter: [number, number] = forecastPath.length > 0 
+    ? [...forecastPath[0]] as [number, number]
+    : (liveTyphoon ? [liveTyphoon.lat, liveTyphoon.lng] : [14.9500, 120.8000]);
   const typhoonRadius = liveTyphoon ? (liveTyphoon.speed * 1000) : 15000;
   const typhoonName = liveTyphoon?.name || "Simulated Tropical Storm";
 
@@ -459,6 +468,70 @@ export default function InteractiveMap({
               pathOptions={{ fillColor: '#ef4444', fillOpacity: 0.35, color: '#dc2626', weight: 4, dashArray: '12, 12' }}
             />
             <Marker position={typhoonCenter} icon={TyphoonEyeIcon} />
+            
+            {/* Forecast Track Line */}
+            {forecastPath.length > 0 && (
+              <>
+                {/* 1. Cone of Uncertainty (Approximated Polygon) */}
+                {(() => {
+                  const leftPoints: [number, number][] = [];
+                  const rightPoints: [number, number][] = [];
+                  
+                  forecastPath.forEach((p, i) => {
+                    // Widening cone that follows the path
+                    const spread = 0.05 + (i * 0.12); 
+                    // To create a real cone, we offset along the longitude (simplified)
+                    // but we ensure it connects smoothly
+                    leftPoints.push([p[0] + (spread * 0.2), p[1] - (spread * 0.8)]);
+                    rightPoints.unshift([p[0] - (spread * 0.2), p[1] + (spread * 0.8)]);
+                  });
+                  
+                  const coneCoords = [...leftPoints, ...rightPoints];
+                  
+                  return (
+                    <Polygon 
+                      positions={coneCoords}
+                      pathOptions={{
+                        fillColor: '#ffffff',
+                        fillOpacity: 0.15,
+                        color: '#cbd5e1',
+                        weight: 1,
+                        dashArray: '4, 4'
+                      }}
+                    />
+                  );
+                })()}
+
+                {/* 2. Solid Track Line */}
+                <Polyline
+                  positions={forecastPath}
+                  pathOptions={{
+                    color: '#dc2626',
+                    weight: 3,
+                    opacity: 0.8
+                  }}
+                />
+
+                {/* 3. Trajectory Nodes (Color coded dots) */}
+                {forecastPath.map((p, i) => {
+                  // Color progression: Pink (Immediate) -> Red (Mid) -> Orange (Late)
+                  const nodeColor = i === 0 ? '#ec4899' : i < 3 ? '#dc2626' : '#f97316';
+                  return (
+                    <Circle
+                      key={`track-node-${i}`}
+                      center={p}
+                      radius={1200}
+                      pathOptions={{
+                        fillColor: nodeColor,
+                        fillOpacity: 1,
+                        color: '#ffffff',
+                        weight: 2
+                      }}
+                    />
+                  );
+                })}
+              </>
+            )}
           </>
         )}
 
