@@ -3,7 +3,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Search,
-  Clock,
   ShieldPlus,
   Siren,
   Info,
@@ -758,7 +757,7 @@ export const RiskLevelPanel = ({
 
               <div className="space-y-5">
                 <RiskCard
-                  icon={<Clock className="w-8 h-8" />}
+                  icon={<Image src="/response.png" alt="Response Time" width={56} height={56} className="w-14 h-14 object-contain" />}
                   title="Generated Response Time"
                   subtext={`${responseTimeMin} minutes`}
                   color="text-blue-600"
@@ -768,7 +767,7 @@ export const RiskLevelPanel = ({
                   onClick={() => setActiveTab('advisory')}
                 />
                 <RiskCard
-                  icon={<ShieldPlus className="w-8 h-8" />}
+                  icon={<Image src="/risklvl.png" alt="Risk Level" width={56} height={56} className="w-14 h-14 object-contain" />}
                   title="Risk Level"
                   subtext={`${riskLevel} - ${incidentType}`}
                   color="text-amber-600"
@@ -778,7 +777,7 @@ export const RiskLevelPanel = ({
                   onClick={() => setActiveTab('what-to-do')}
                 />
                 <RiskCard
-                  icon={<Siren className="w-8 h-8" />}
+                  icon={<Image src="/nearest.png" alt="Nearest Facilities" width={56} height={56} className="w-14 h-14 object-contain" />}
                   title="Nearest Facilities"
                   subtext="Ready for Dispatch"
                   color="text-slate-900"
