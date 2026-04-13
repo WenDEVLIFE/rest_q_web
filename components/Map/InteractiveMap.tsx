@@ -20,6 +20,7 @@ interface InteractiveMapProps {
   forceTab?: 'metrics' | 'advisory' | 'what-to-do' | 'facilities';
   forceOpen?: boolean;
   onReset?: () => void;
+  onLocationSelect?: (lat: number, lng: number, label: string) => void;
 }
 
 type FloodTileLevel = 'low' | 'medium' | 'high';
@@ -199,6 +200,21 @@ const getIconForType = (type: string) => {
   return iconCache[type];
 };
 
+const TyphoonEyeIcon = L.divIcon({
+  className: "custom-typhoon-eye",
+  html: `
+    <div class="relative w-16 h-16 -ml-8 -mt-8">
+      <div class="absolute inset-0 rounded-full bg-red-500/20 animate-ping duration-[3000ms]"></div>
+      <div class="absolute inset-0 rounded-full border-4 border-dashed border-red-600 animate-spin duration-[10000ms]"></div>
+      <div class="absolute inset-1/4 rounded-full bg-red-600 border-2 border-white shadow-lg flex items-center justify-center text-white">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </div>
+    </div>
+  `,
+  iconSize: [64, 64],
+  iconAnchor: [32, 32],
+});
+
 const ReportPinIcon = L.divIcon({
   className: "custom-report-icon",
   html: `
@@ -260,14 +276,18 @@ const MapEvents = ({ onMapClick }: { onMapClick?: (lat: number, lng: number) => 
   return null;
 };
 
-const MapController = ({ focusPin }: { focusPin?: { lat: number, lng: number } | null }) => {
+const MapController = ({ focusPin, stormFocus }: { 
+  focusPin?: { lat: number, lng: number } | null,
+  stormFocus?: [number, number] | null
+}) => {
   const map = useMap();
   useEffect(() => {
-    if (focusPin) {
-      // Smoothly pan and zoom to the specific establishment
+    if (stormFocus) {
+      map.flyTo(stormFocus, 10, { duration: 2 });
+    } else if (focusPin) {
       map.flyTo([focusPin.lat, focusPin.lng], 16, { duration: 1.5 });
     }
-  }, [focusPin, map]);
+  }, [focusPin, stormFocus, map]);
   return null;
 };
 
@@ -285,14 +305,47 @@ export default function InteractiveMap({
   onOverlayModeChange,
   forceTab,
   forceOpen,
-  onReset
+  onReset,
+  onLocationSelect
 }: InteractiveMapProps) {
   const [isMounted, setIsMounted] = React.useState(false);
+  const [liveTyphoon, setLiveTyphoon] = React.useState<{ lat: number, lng: number, name: string, speed: number } | null>(null);
+  const [stormFocusTrigger, setStormFocusTrigger] = React.useState<[number, number] | null>(null);
   const mapContainerRef = React.useRef<HTMLDivElement>(null);
+
+  // Handle hydration to prevent Leaflet errors on the server
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Fetch real-time typhoon data from our new API
+  React.useEffect(() => {
+    if (!isMounted) return;
+    const fetchTyphoon = async () => {
+      try {
+        const res = await fetch('/api/typhoon');
+        const json = await res.json();
+        if (json.success && json.data) {
+          setLiveTyphoon(json.data);
+        }
+      } catch (e) {
+        console.error("Failed to fetch live typhoon telemetry", e);
+      }
+    };
+    fetchTyphoon();
+  }, [isMounted]);
 
   // Center roughly to the establishments data
   const center: [number, number] = [15.0589, 120.6460];
   const [localSearchPin, setLocalSearchPin] = React.useState<{ lat: number, lng: number, label?: string } | null>(null);
+
+  if (!isMounted) {
+    return (
+      <div className="absolute inset-0 w-full h-full bg-slate-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-sky-600" />
+      </div>
+    );
+  }
 
   // Use global focus pin or external search pin if provided, otherwise use local
   const activeSearchPin = focusPin || externalSearchPin || localSearchPin;
@@ -311,9 +364,10 @@ export default function InteractiveMap({
     setLocalSearchPin(null);
   };
 
-  // Simulated Typhoon Path (Polyline and large radius)
-  const typhoonCenter: [number, number] = [14.9500, 120.8000];
-  const typhoonRadius = 15000;
+  // Simulated Typhoon Path fallback if no live data is active
+  const typhoonCenter: [number, number] = liveTyphoon ? [liveTyphoon.lat, liveTyphoon.lng] : [14.9500, 120.8000];
+  const typhoonRadius = liveTyphoon ? (liveTyphoon.speed * 1000) : 15000;
+  const typhoonName = liveTyphoon?.name || "Simulated Tropical Storm";
 
   // Simulated Routing (From arbitrary A to arbitrary B, simulating routing to hospital)
   const routePoints: [number, number][] = [
@@ -341,7 +395,10 @@ export default function InteractiveMap({
         />
 
         <MapEvents onMapClick={overlayMode === 'report' ? onMapClick : undefined} />
-        <MapController focusPin={focusPin || activeSearchPin} />
+        <MapController 
+          focusPin={focusPin || activeSearchPin} 
+          stormFocus={stormFocusTrigger}
+        />
 
         {/* --- Markers for Establishments --- */}
         {establishmentsData.map((est, idx) => (
@@ -399,8 +456,9 @@ export default function InteractiveMap({
             <Circle
               center={typhoonCenter}
               radius={typhoonRadius}
-              pathOptions={{ fillColor: '#ef4444', fillOpacity: 0.2, color: '#dc2626', weight: 2, dashArray: '10, 10' }}
+              pathOptions={{ fillColor: '#ef4444', fillOpacity: 0.35, color: '#dc2626', weight: 4, dashArray: '12, 12' }}
             />
+            <Marker position={typhoonCenter} icon={TyphoonEyeIcon} />
           </>
         )}
 
@@ -490,6 +548,12 @@ export default function InteractiveMap({
           onToggleRadar={(type) => onOverlayModeChange && onOverlayModeChange(type as any)}
           forceTab={forceTab}
           forceOpen={forceOpen}
+          typhoonName={typhoonName}
+          onLocateStorm={() => {
+            setStormFocusTrigger([...typhoonCenter]);
+            // Clear trigger after a bit so it can be re-triggered
+            setTimeout(() => setStormFocusTrigger(null), 3000);
+          }}
         />
       </div>
     </div>

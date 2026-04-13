@@ -41,6 +41,8 @@ interface RiskLevelPanelProps {
   onToggleRadar?: (type: 'flood' | 'typhoon') => void;
   forceTab?: 'metrics' | 'advisory' | 'what-to-do' | 'facilities';
   forceOpen?: boolean;
+  typhoonName?: string;
+  onLocateStorm?: () => void;
 }
 
 type IncidentCategory = 'Fire Incident' | 'Health-Related Incident' | 'Flood Risk' | 'Typhoon Risk';
@@ -66,7 +68,17 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
   return d;
 };
 
-export const RiskLevelPanel = ({ onLocationSelect, onReset, selectedLocation, reportedIncidents = [], onToggleRadar, forceTab, forceOpen }: RiskLevelPanelProps) => {
+export const RiskLevelPanel = ({
+  onLocationSelect,
+  onReset,
+  selectedLocation,
+  reportedIncidents = [],
+  onToggleRadar,
+  forceTab,
+  forceOpen,
+  typhoonName = "Tropical Storm Simulation",
+  onLocateStorm
+}: RiskLevelPanelProps) => {
   const [activeTab, setActiveTab] = useState<'metrics' | 'advisory' | 'what-to-do' | 'facilities'>('metrics');
   const [manualIncidentType, setManualIncidentType] = useState<IncidentCategory>('Fire Incident');
   const [isCollapsed, setIsCollapsed] = useState(true);
@@ -530,10 +542,10 @@ export const RiskLevelPanel = ({ onLocationSelect, onReset, selectedLocation, re
       <div className="w-full h-full flex flex-col overflow-hidden rounded-[40px]">
         {/* Unified Header with Search */}
         <div className="p-8 pb-6 border-b border-slate-100/50 bg-white/50 backdrop-blur-md">
-          <SidebarSearch 
-            onLocationSelect={onLocationSelect} 
-            onReset={handleReset} 
-            initialValue={selectedLocation?.label} 
+          <SidebarSearch
+            onLocationSelect={onLocationSelect}
+            onReset={handleReset}
+            initialValue={selectedLocation?.label}
           />
 
           {selectedLocation && activeTab !== 'facilities' && (
@@ -612,8 +624,8 @@ export const RiskLevelPanel = ({ onLocationSelect, onReset, selectedLocation, re
           ) : activeTab === 'advisory' ? (
             <div className="space-y-8 animate-in slide-in-from-right-8 duration-500">
               <div className="flex items-center gap-4 mb-4">
-                <button 
-                  onClick={() => setActiveTab('metrics')} 
+                <button
+                  onClick={() => setActiveTab('metrics')}
                   className="p-3 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all active:scale-90"
                 >
                   <ChevronRight className="w-5 h-5 text-slate-500 rotate-180" />
@@ -791,8 +803,8 @@ export const RiskLevelPanel = ({ onLocationSelect, onReset, selectedLocation, re
                 />
                 <RiskCard
                   icon={<Wind className="w-8 h-8" />}
-                  title="Typhoon Risk Radar"
-                  subtext="Live NOAH Telemetry"
+                  title={typhoonName || "Typhoon Risk Radar"}
+                  subtext={typhoonName ? "Live Meteorological Data" : "Live NOAH Telemetry"}
                   color="text-red-600"
                   bgColor="bg-red-50"
                   iconColor="text-red-500"
@@ -800,48 +812,60 @@ export const RiskLevelPanel = ({ onLocationSelect, onReset, selectedLocation, re
                   onClick={() => {
                     onToggleRadar && onToggleRadar('typhoon');
                     setActiveTab('advisory');
+                    if (onLocateStorm) onLocateStorm();
                   }}
                 />
+                {onToggleRadar && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onLocateStorm) onLocateStorm();
+                    }}
+                    className="mt-3 w-full py-2 bg-red-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-red-700 transition-all active:scale-95 shadow-lg shadow-red-200"
+                  >
+                    Locate Storm Center
+                  </button>
+                )}
+              </div>
 
-                {/* --- REAL-TIME WEATHER FORECAST WIDGET --- */}
-                {weatherData && (
-                  <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-[28px] p-6 shadow-lg relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-10">
-                      <Cloud className="w-24 h-24 text-white" />
+              {/* --- REAL-TIME WEATHER FORECAST WIDGET --- */}
+              {weatherData && (
+                <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-[28px] p-6 shadow-lg relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-4 opacity-10">
+                    <Cloud className="w-24 h-24 text-white" />
+                  </div>
+                  <div className="relative z-10 flex flex-col justify-between h-full space-y-4">
+                    <div>
+                      <p className="text-[10px] font-black tracking-[0.2em] uppercase text-slate-400 mb-1 flex items-center gap-2">
+                        <MapPin className="w-3 h-3 text-emerald-400" /> Live Environment
+                      </p>
+                      <h4 className="text-xl font-bold text-white capitalize">{weatherData.weather[0]?.description}</h4>
                     </div>
-                    <div className="relative z-10 flex flex-col justify-between h-full space-y-4">
-                      <div>
-                        <p className="text-[10px] font-black tracking-[0.2em] uppercase text-slate-400 mb-1 flex items-center gap-2">
-                          <MapPin className="w-3 h-3 text-emerald-400" /> Live Environment
-                        </p>
-                        <h4 className="text-xl font-bold text-white capitalize">{weatherData.weather[0]?.description}</h4>
+                    <div className="grid grid-cols-2 gap-3 mt-2">
+                      <div className="flex flex-col bg-white/5 rounded-xl p-3 border border-white/5">
+                        <div className="flex items-center gap-1.5 mb-1 text-slate-300">
+                          <Thermometer className="w-3.5 h-3.5" />
+                          <span className="text-[9px] uppercase tracking-wider font-bold">Temp</span>
+                        </div>
+                        <span className="text-lg font-black text-white">{Math.round(weatherData.main.temp)}°C</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-3 mt-2">
-                        <div className="flex flex-col bg-white/5 rounded-xl p-3 border border-white/5">
-                          <div className="flex items-center gap-1.5 mb-1 text-slate-300">
-                            <Thermometer className="w-3.5 h-3.5" />
-                            <span className="text-[9px] uppercase tracking-wider font-bold">Temp</span>
-                          </div>
-                          <span className="text-lg font-black text-white">{Math.round(weatherData.main.temp)}°C</span>
+                      <div className="flex flex-col bg-white/5 rounded-xl p-3 border border-white/5">
+                        <div className="flex items-center gap-1.5 mb-1 text-slate-300">
+                          <Wind className="w-3.5 h-3.5" />
+                          <span className="text-[9px] uppercase tracking-wider font-bold">Wind</span>
                         </div>
-                        <div className="flex flex-col bg-white/5 rounded-xl p-3 border border-white/5">
-                          <div className="flex items-center gap-1.5 mb-1 text-slate-300">
-                            <Wind className="w-3.5 h-3.5" />
-                            <span className="text-[9px] uppercase tracking-wider font-bold">Wind</span>
-                          </div>
-                          <span className="text-lg font-black text-white">{weatherData.wind.speed} m/s</span>
-                        </div>
+                        <span className="text-lg font-black text-white">{weatherData.wind.speed} m/s</span>
                       </div>
                     </div>
                   </div>
-                )}
-                
-              </div>
+                </div>
+              )}
+
             </div>
           )}
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 
