@@ -19,6 +19,7 @@ interface InteractiveMapProps {
   onOverlayModeChange?: (mode: 'none' | 'flood' | 'typhoon' | 'route' | 'report' | 'explore' | 'emergency') => void;
   forceTab?: 'metrics' | 'advisory' | 'what-to-do' | 'facilities';
   forceOpen?: boolean;
+  onReset?: () => void;
 }
 
 type FloodTileLevel = 'low' | 'medium' | 'high';
@@ -42,7 +43,7 @@ const pampangaBounds = {
 };
 
 const floodInfluenceCenters: Array<{ lat: number; lng: number; weight: number }> = [
-  { lat: 15.0333, lng: 120.6833, weight: 1.0 },
+  { lat: 15.0333, lng: 120.6833, weight: 0.72 },
   { lat: 15.1450, lng: 120.5850, weight: 0.92 },
   { lat: 15.2160, lng: 120.6520, weight: 0.88 },
   { lat: 15.1020, lng: 120.7300, weight: 0.84 },
@@ -123,8 +124,8 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 
 const floodTiles: FloodTile[] = (() => {
   const tiles: FloodTile[] = [];
-  const latStep = 0.0125;
-  const lngStep = 0.0125;
+  const latStep = (pampangaBounds.north - pampangaBounds.south) / 128;
+  const lngStep = (pampangaBounds.east - pampangaBounds.west) / 128;
 
   for (let lat = pampangaBounds.south; lat <= pampangaBounds.north; lat += latStep) {
     for (let lng = pampangaBounds.west; lng <= pampangaBounds.east; lng += lngStep) {
@@ -132,22 +133,26 @@ const floodTiles: FloodTile[] = (() => {
         ...floodCorridors.map(([start, end]) => distanceToSegmentKm(lat, lng, start, end))
       );
 
-      const centerInfluence = floodInfluenceCenters.reduce((strongest, center) => {
+      const centerInfluenceSum = floodInfluenceCenters.reduce((sum, center) => {
         const distance = calculateDistance(lat, lng, center.lat, center.lng);
         const influence = Math.max(0, 1 - distance / 24) * center.weight;
-        return Math.max(strongest, influence);
+        return sum + influence;
       }, 0);
+      const centerInfluence = centerInfluenceSum / floodInfluenceCenters.length;
 
       const provincialGradient = Math.max(0, 1 - calculateDistance(lat, lng, 15.05, 120.64) / 85) * 0.4;
-      const patternNoise = (Math.sin(lat * 46 + lng * 2.5) + Math.cos(lng * 39 - lat * 3.8)) * 0.11;
-      const intensity = Math.max(0, 1 - corridorDistance / 8.5) * 0.5 + centerInfluence * 0.55 + provincialGradient + patternNoise;
+      const patternNoise = (Math.sin(lat * 60 + lng * 3.5) + Math.cos(lng * 50 - lat * 4.2)) * 0.08;
+      const corridorInfluence = Math.max(0, 1 - corridorDistance / 7.5);
+      // Heavier weights on corridors and centers to create more diverse high-risk zones
+      const rawIntensity = corridorInfluence * 0.55 + centerInfluence * 0.45 + provincialGradient * 0.15 + patternNoise;
+      const intensity = Math.max(0, Math.min(1, rawIntensity));
 
-      if (intensity < 0.12) continue;
+      if (intensity < 0.05) continue; // Lowered to cover most of Pampanga
 
-      const level: FloodTileLevel = intensity > 0.66 ? 'high' : intensity > 0.43 ? 'medium' : 'low';
+      const level: FloodTileLevel = intensity > 0.65 ? 'high' : intensity > 0.35 ? 'medium' : 'low';
       tiles.push({
         level,
-        positions: createTile(lat, lng, 0.0126, 0.0126), // Size matches step exactly + tiny overlap for seamless transition
+        positions: createTile(lat, lng, latStep * 1.05, lngStep * 1.05), // size matches new 128x128 step + overlap
       });
     }
   }
@@ -279,7 +284,8 @@ export default function InteractiveMap({
   onMapClick,
   onOverlayModeChange,
   forceTab,
-  forceOpen
+  forceOpen,
+  onReset
 }: InteractiveMapProps) {
   const [isMounted, setIsMounted] = React.useState(false);
   const mapContainerRef = React.useRef<HTMLDivElement>(null);
@@ -477,9 +483,9 @@ export default function InteractiveMap({
       {/* --- FLOATING UI OVERLAYS --- */}
       <div className="absolute top-24 right-8 bottom-24 z-[1001] w-full max-w-[450px] pointer-events-auto flex flex-col justify-center animate-in slide-in-from-right-8 duration-500">
         <RiskLevelPanel
-          selectedLocation={activeSearchPin}
-          onLocationSelect={handleLocationSelect}
-          onReset={handleReset}
+          selectedLocation={focusPin || activeSearchPin}
+          onLocationSelect={handleLocationSelect || handleLocationSelect}
+          onReset={onReset || handleReset}
           reportedIncidents={reportedIncidents}
           onToggleRadar={(type) => onOverlayModeChange && onOverlayModeChange(type as any)}
           forceTab={forceTab}

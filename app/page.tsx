@@ -230,6 +230,11 @@ export default function Home() {
             reportedIncidents={mapIncidents}
             onMapClick={(lat, lng) => setReportPin({ lat, lng })}
             onOverlayModeChange={(mode) => setOverlayMode(mode)}
+            onReset={() => {
+              setFocusPin(null);
+              setOverlayMode('none');
+              setIsMapPanelOpen(false);
+            }}
             forceTab={mapPanelTab}
             forceOpen={isMapPanelOpen}
           />

@@ -23,7 +23,9 @@ import {
   HeartPulse,
   Hospital,
   Thermometer,
-  Cloud
+  Cloud,
+  Car,
+  Users
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -543,7 +545,10 @@ export const RiskLevelPanel = ({ onLocationSelect, onReset, selectedLocation, re
                 </h2>
               </div>
               <button
-                onClick={handleReset}
+                onClick={() => {
+                  handleReset();
+                  onToggleRadar && onToggleRadar('none' as any);
+                }}
                 className="p-3 bg-red-50 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all active:scale-90"
                 title="Clear focus"
               >
@@ -605,27 +610,49 @@ export const RiskLevelPanel = ({ onLocationSelect, onReset, selectedLocation, re
               </div>
             </div>
           ) : activeTab === 'advisory' ? (
-            <div className="space-y-6 animate-in slide-in-from-right-8 duration-300">
+            <div className="space-y-8 animate-in slide-in-from-right-8 duration-500">
               <div className="flex items-center gap-4 mb-4">
-                <button onClick={() => setActiveTab('metrics')} className="p-2 -ml-2 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors">
+                <button 
+                  onClick={() => setActiveTab('metrics')} 
+                  className="p-3 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all active:scale-90"
+                >
                   <ChevronRight className="w-5 h-5 text-slate-500 rotate-180" />
                 </button>
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight">
-                  Response Insight
+                <h3 className="text-4xl font-black text-slate-900 tracking-tighter">
+                  Advisory
                 </h3>
               </div>
 
-              <div className="rounded-3xl border border-blue-100 bg-blue-50/70 p-6 space-y-4">
-                <div className="flex items-center justify-between gap-3">
-                  <Image src="/Response Time LOGO.png" alt="Response Time" width={64} height={64} className="object-contain" />
+              <div className="space-y-8 px-2">
+                {/* Traffic Advisory */}
+                <div className="flex items-center justify-between group cursor-pointer">
+                  <span className="text-xl font-bold text-slate-700 leading-tight flex-1 pr-4">
+                    Traffic at Dolores Intersection
+                  </span>
+                  <div className="w-20 h-20 flex items-center justify-center text-primary transform transition-transform group-hover:scale-110">
+                    <Car className="w-16 h-16 stroke-[1.5]" />
+                  </div>
                 </div>
-                <p className="text-sm font-bold text-slate-700 leading-relaxed">{advisoryText}</p>
-                {nearbyReportedIncident && (
-                  <p className="text-xs font-bold text-red-600 mt-1">
-                    Nearby reported {nearbyReportedIncident.incident.type} incident ({nearbyReportedIncident.distanceKm.toFixed(2)} km away)
-                  </p>
-                )}
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Current Context: {incidentType} • {riskLevel}</p>
+
+                {/* Flood Depth Advisory */}
+                <div className="flex items-center justify-between group cursor-pointer border-y border-slate-50 py-8">
+                  <div className="w-20 h-20 flex items-center justify-center text-blue-500 transform transition-transform group-hover:scale-110">
+                    <Waves className="w-16 h-16 stroke-[1.5]" />
+                  </div>
+                  <span className="text-xl font-bold text-slate-700 leading-tight flex-1 pl-4 text-right">
+                    Flood depth in (indicate the area)
+                  </span>
+                </div>
+
+                {/* Pedestrian Advisory */}
+                <div className="flex items-center justify-between group cursor-pointer">
+                  <span className="text-xl font-bold text-slate-700 leading-tight flex-1 pr-4">
+                    High Pedestrian Volume
+                  </span>
+                  <div className="w-20 h-20 flex items-center justify-center text-indigo-500 transform transition-transform group-hover:scale-110">
+                    <Users className="w-16 h-16 stroke-[1.5]" />
+                  </div>
+                </div>
               </div>
             </div>
           ) : activeTab === 'what-to-do' ? (
@@ -757,7 +784,10 @@ export const RiskLevelPanel = ({ onLocationSelect, onReset, selectedLocation, re
                   bgColor="bg-blue-50"
                   iconColor="text-blue-500"
                   accentColor="border-blue-500"
-                  onClick={() => onToggleRadar && onToggleRadar('flood')}
+                  onClick={() => {
+                    onToggleRadar && onToggleRadar('flood');
+                    setActiveTab('advisory');
+                  }}
                 />
                 <RiskCard
                   icon={<Wind className="w-8 h-8" />}
@@ -767,7 +797,10 @@ export const RiskLevelPanel = ({ onLocationSelect, onReset, selectedLocation, re
                   bgColor="bg-red-50"
                   iconColor="text-red-500"
                   accentColor="border-red-500"
-                  onClick={() => onToggleRadar && onToggleRadar('typhoon')}
+                  onClick={() => {
+                    onToggleRadar && onToggleRadar('typhoon');
+                    setActiveTab('advisory');
+                  }}
                 />
 
                 {/* --- REAL-TIME WEATHER FORECAST WIDGET --- */}
