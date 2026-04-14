@@ -7,7 +7,8 @@ import {
   Siren,
   ShieldPlus,
   Search,
-  MapPin
+  MapPin,
+  Phone
 } from 'lucide-react';
 import { SidebarSearch } from './SidebarSearch';
 import establishmentsData from '../../public/establishment.json';
@@ -97,6 +98,15 @@ export const FacilitySidebar = ({ onClose, selectedLocation, onLocationSelect }:
                     <div>
                       <p className="text-sm font-black text-slate-900 leading-tight group-hover:text-primary transition-colors">{facility.Name}</p>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">{facility["Establishment Type"]}</p>
+                      {facility.Phone && (
+                        <a 
+                          href={`tel:${facility.Phone.split('/')[0].replace(/[^\d+]/g, '')}`}
+                          className="text-[11px] font-bold text-slate-500 mt-2 flex items-center gap-1.5 hover:text-primary transition-colors"
+                        >
+                          <Phone className="w-3.5 h-3.5 text-slate-400 group-hover:text-primary" />
+                          {facility.Phone}
+                        </a>
+                      )}
                     </div>
                   </div>
                   <div className="text-right">

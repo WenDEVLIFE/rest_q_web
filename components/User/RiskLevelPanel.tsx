@@ -216,10 +216,10 @@ export const RiskLevelPanel = ({
         : 'Fast response expected. Keep calm and follow standard emergency procedures.';
 
   const contactLine = useMemo(() => {
-    if (incidentType === 'Fire Incident') return { label: 'Call Bureau of Fire Protection (BFP)', value: '09XXXXXXXXX' };
-    if (incidentType === 'Health-Related Incident') return { label: 'Call Emergency Medical Services (EMS)', value: '09XXXXXXXXX' };
-    if (incidentType === 'Flood Risk') return { label: 'Call MDRRMO / Rescue Desk', value: '09XXXXXXXXX' };
-    return { label: 'Call MDRRMO / Typhoon Hotline', value: '09XXXXXXXXX' };
+    if (incidentType === 'Fire Incident') return { label: 'Call Bureau of Fire Protection (BFP)', value: '(045) 961-2313' };
+    if (incidentType === 'Health-Related Incident') return { label: 'Call Rural Health Unit (EMS)', value: '0919-078-8456' };
+    if (incidentType === 'Flood Risk') return { label: 'Call CDRRMO / Rescue Desk', value: '0939-936-2423' };
+    return { label: 'Call CDRRMO / Typhoon Hotline', value: '0939-936-2423' };
   }, [incidentType]);
 
   const actionSteps = useMemo<ActionStep[]>(() => {
@@ -628,6 +628,9 @@ export const RiskLevelPanel = ({
                         <div>
                           <p className="text-sm font-black text-slate-900 leading-tight">{est.Name}</p>
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{est["Establishment Type"]}</p>
+                          {est.Phone && (
+                            <p className="text-[11px] font-bold text-slate-500 mt-2">{est.Phone}</p>
+                          )}
                         </div>
                       </div>
                       <div className="text-right shrink-0">
@@ -715,7 +718,12 @@ export const RiskLevelPanel = ({
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <div>
                     <h4 className="text-xl font-black text-slate-900 mt-1">{riskLevel} Actions</h4>
-                    <p className="text-xs font-bold text-slate-500 mt-1">{contactLine.label} <span className="text-emerald-600">{contactLine.value}</span></p>
+                    <p className="text-xs font-bold text-slate-500 mt-1">
+                      {contactLine.label}{' '}
+                      <a href={`tel:${contactLine.value.replace(/[^\d+]/g, '')}`} className="text-emerald-600 hover:underline">
+                        {contactLine.value}
+                      </a>
+                    </p>
                   </div>
                   <Image 
                     src="/Risk Level LOGO.png" 

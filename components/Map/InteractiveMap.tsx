@@ -502,25 +502,35 @@ export default function InteractiveMap({
             icon={getIconForType(est["Establishment Type"])}
           >
             <Popup className="font-inter">
-              <div className="flex flex-col items-center">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{est["Establishment Type"]}</p>
-                <p className="text-sm font-black text-slate-900 leading-tight mb-4 text-center">{est.Name}</p>
-                
-                <button 
-                  onClick={() => {
-                    if (onLocationSelect) {
-                      onLocationSelect(est.Latitude, est.Longitude, est.Name);
-                    }
-                    if (onOverlayModeChange) {
-                      onOverlayModeChange('route');
-                    }
-                  }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                  Get Directions
-                </button>
-              </div>
+                <div className="flex flex-col items-center">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{est["Establishment Type"]}</p>
+                  <p className="text-sm font-black text-slate-900 leading-tight mb-2 text-center">{est.Name}</p>
+                  
+                  {est.Phone && (
+                    <a 
+                      href={`tel:${est.Phone.split('/')[0].replace(/[^\d+]/g, '')}`}
+                      className="text-[11px] font-bold text-blue-600 mb-4 hover:underline flex items-center gap-1"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                      {est.Phone}
+                    </a>
+                  )}
+
+                  <button 
+                    onClick={() => {
+                      if (onLocationSelect) {
+                        onLocationSelect(est.Latitude, est.Longitude, est.Name);
+                      }
+                      if (onOverlayModeChange) {
+                        onOverlayModeChange('route');
+                      }
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    Get Directions
+                  </button>
+                </div>
             </Popup>
           </Marker>
         ))}
