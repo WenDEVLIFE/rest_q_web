@@ -1,0 +1,65 @@
+--------------------------------------------------------------------------------
+RES-Q PLATFORM CONNECTIVITY & ACCURACY AUDIT (V2.5)
+Date: April 14, 2026
+--------------------------------------------------------------------------------
+
+This text file serves as the definitive source of truth for all system mechanics. 
+If a feature is not listed as [CONNECTED], assume it is a simulation for UI testing.
+
+================================================================================
+SECTION 1: ROUTING & PREDICTIONS (YOUR QUESTION)
+================================================================================
+
+Q: Is the "Live Prediction" and "Optimal Route" accurate?
+A: [PARTIAL / HEURISTIC]
+
+How it works right now:
+1. DISTANCE: It uses real Euclidean distance (as the crow flies) between coordinates.
+2. TIME: It uses the formula T = (D*K) + Φ + Ω found in Intelligence Hub.
+3. ACCURACY: It is ACCURATE in terms of "Estimated Time" based on our math.
+4. LIMITATION: It is NOT yet a turn-by-turn navigation engine. It does not 
+   calculate the specific street-by-street path. It treats the distance as a 
+   line and adds penalties for flood/traffic clusters that intersect that line.
+
+[NOT CONNECTED] - Real Pathfinding: We do not yet have a C++ OSRM or GraphHopper 
+backend to do full Dijkstra/A* routing on the KML road network.
+
+================================================================================
+SECTION 2: USER FEATURE STATUS
+================================================================================
+
+1.  MAP VISUALS        [CONNECTED]   - MapTiler / Topo V2
+2.  SEARCH/GEOCODING   [CONNECTED]   - MapTiler Search 
+3.  REPORTING INCIDENT [CONNECTED]   - Firestore (Live Sync)
+4.  AI TRIAGE CHAT     [CONNECTED]   - Innovatech AI (Real LLM)
+5.  WEATHER/RADAR      [CONNECTED]   - OpenWeatherMap (Real Local Data)
+6.  TYPHOON TRACK      [MOCKED]      - Uses internal /api/typhoon (Fake storm)
+7.  EMERGENCY LIST     [MOCKED]      - Still reading from establishments.json
+8.  DIRECTION BUTTON   [MOCKED]      - Just opens Google Maps in a new tab
+
+================================================================================
+SECTION 3: ADMIN FEATURE STATUS
+================================================================================
+
+1.  LIVE MONITORING    [CONNECTED]   - Real-time Firestore stream
+2.  KML IMPORT         [CONNECTED]   - Parses local models & writes to Firestore
+3.  ROAD STATUS MGT    [CONNECTED]   - Admins can edit traffic in Firestore
+4.  USER MANAGEMENT    [CONNECTED]   - CRUD for Users in Firestore/Auth
+5.  PRONE AREA VIEW    [CONNECTED]   - Fetches dynamic circles from Firestore
+6.  PRONE AREA EDIT    [MOCKED]      - Admin cannot "draw" a new circle yet
+7.  TRAFFIC CHARTS     [MOCKED]      - Bar charts in Analytics are hardcoded
+8.  SYSTEM SETTINGS    [MOCKED]      - Keys stored in browser, not synced
+9.  FACILITY CRUD      [MOCKED]      - No UI to add/remove Hospitals yet
+
+================================================================================
+SECTION 4: UPCOMING CORE DISCONNECTS (TODO FOR DEVELOPERS)
+================================================================================
+
+- The Admin cannot currently "Assign" a specific responder to an incident.
+- The "Dispatch" button in the Monitoring view is just a UI pop-up.
+- The KML Road segments are display-only; they are not yet part of a 
+  weighted-graph for automated routing suggestions.
+
+--------------------------------------------------------------------------------
+END OF AUDIT
+--------------------------------------------------------------------------------

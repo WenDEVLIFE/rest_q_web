@@ -21,7 +21,8 @@ import {
 import type { Incident } from "../../types/incident";
 import { removeIncidentById, subscribeToIncidents as subscribeToIncidentStream, updateIncidentStatus } from "../../service/Incident_Service";
 import type { UserRecord } from "../../types/user_record";
-import type { TrafficStats } from "../../types/traffic_stats";
+import { type TrafficStats } from "../../types/traffic_stats";
+import type { ProneArea } from "../../types/prone_area";
 
 // Secondary App Configuration for External User Creation
 // This prevents the Admin from being signed out during user registration.
@@ -53,6 +54,8 @@ const getSecondaryAuth = () => {
 export class AdminHandler {
   private static COLLECTION_NAME = "incidents";
   private static USERS_COLLECTION = "users";
+  private static PRONE_AREAS_COLLECTION = "prone_areas";
+  private static TRAFFIC_SEGMENTS_COLLECTION = "traffic_segments";
 
   /**
   * Fetches all incidents from Firestore
@@ -208,6 +211,144 @@ export class AdminHandler {
       await updateDoc(userRef, data as any);
     } catch (error) {
       console.error("Error updating user:", error);
+      throw error;
+    }
+  }
+
+  /**
+  * Fetches all designated prone areas from Firestore
+  */
+  static async getProneAreas(): Promise<ProneArea[]> {
+    try {
+      const q = query(collection(db, this.PRONE_AREAS_COLLECTION), orderBy("updatedAt", "desc"));
+      const snapshot = await getDocs(q);
+      const areas = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...(doc.data() as Omit<ProneArea, 'id'>)
+      }));
+      return areas.length > 0 ? areas : this.getMockProneAreas();
+    } catch (error) {
+      console.error("Error fetching prone areas:", error);
+      return this.getMockProneAreas();
+    }
+  }
+
+  /**
+  * Adds or updates a prone area
+  */
+  static async addProneArea(area: Omit<ProneArea, 'id'>): Promise<string> {
+    try {
+      const areaRef = doc(collection(db, this.PRONE_AREAS_COLLECTION));
+      await setDoc(areaRef, {
+        ...area,
+        updatedAt: Timestamp.now()
+      });
+      return areaRef.id;
+    } catch (error) {
+      console.error("Error adding prone area:", error);
+      throw error;
+    }
+  }
+
+  /**
+  * Deletes a prone area
+  */
+  static async deleteProneArea(id: string): Promise<void> {
+    try {
+      const areaRef = doc(db, this.PRONE_AREAS_COLLECTION, id);
+      await deleteDoc(areaRef);
+    } catch (error) {
+      console.error("Error deleting prone area:", error);
+      throw error;
+    }
+  }
+
+  /**
+  * Mock data for prone areas
+  */
+  private static getMockProneAreas(): ProneArea[] {
+    return [
+      {
+        id: "pa-001",
+        name: "Dolores Intersection",
+        lat: 15.0333,
+        lng: 120.6833,
+        radius: 400,
+        status: 'Unfixed',
+        category: 'Flood',
+        notes: "Critical drainage system failure; structural basement cracks detected after M5.2 tremor.",
+        updatedAt: Timestamp.now()
+      },
+      {
+        id: "pa-002",
+        name: "Sindalan North Arch",
+        lat: 15.0680,
+        lng: 120.6550,
+        radius: 500,
+        status: 'Unfixed',
+        category: 'Accident',
+        notes: "High blind-spot frequency near the archway. Damaged telemetry sensor node.",
+        updatedAt: Timestamp.now()
+      },
+      {
+        id: "pa-003",
+        name: "St. Jude Fire Cluster",
+        lat: 15.0450,
+        lng: 120.6950,
+        radius: 350,
+        status: 'Unfixed',
+        category: 'Fire',
+        notes: "Narrow access roads. High electrical density area. Previous transformer fire damaged ground infrastructure.",
+        updatedAt: Timestamp.now()
+      }
+    ];
+  }
+
+  /**
+  * Fetches all traffic segments for the map
+  */
+  static async getTrafficSegments(): Promise<any[]> {
+    try {
+      const q = query(collection(db, this.TRAFFIC_SEGMENTS_COLLECTION));
+      const snapshot = await getDocs(q);
+      const segments = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      return segments;
+    } catch (error) {
+      console.error("Error fetching traffic segments:", error);
+      return [];
+    }
+  }
+
+  /**
+  * Updates or adds multiple segments (e.g. from KML import)
+  */
+  static async bulkUpsertTrafficSegments(segments: any[]): Promise<void> {
+    try {
+      for (const segment of segments) {
+        const ref = doc(db, this.TRAFFIC_SEGMENTS_COLLECTION, segment.id);
+        await setDoc(ref, {
+           ...segment,
+           updatedAt: Timestamp.now()
+        }, { merge: true });
+      }
+    } catch (error) {
+      console.error("Error bulk upserting segments:", error);
+      throw error;
+    }
+  }
+
+  /**
+  * Updates a single segment's status (Red/Yellow/Green)
+  */
+  static async updateTrafficStatus(id: string, status: 'heavy' | 'moderate' | 'fluid'): Promise<void> {
+    try {
+      const ref = doc(db, this.TRAFFIC_SEGMENTS_COLLECTION, id);
+      await updateDoc(ref, { status, updatedAt: Timestamp.now() });
+    } catch (error) {
+      console.error("Error updating traffic status:", error);
       throw error;
     }
   }

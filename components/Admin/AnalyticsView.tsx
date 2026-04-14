@@ -10,20 +10,89 @@ import {
   Wind,
   Settings2
 } from 'lucide-react';
-import { AdminHandler, TrafficStats } from '../../src/agents/AdminDashboardAgent/AdminHandler';
+import { AdminHandler } from '../../src/agents/AdminDashboardAgent/AdminHandler';
+import { TrafficStats } from '../../src/types/traffic_stats';
+import { KMLService } from '../../src/service/KML_Service';
+import { ExcelService, ExcelTrafficRow } from '../../src/service/Excel_Service';
+import { 
+  FileJson, 
+  Map as MapIcon, 
+  RefreshCcw, 
+  Trash2, 
+  Activity,
+  UploadCloud,
+  Layers,
+  CheckCircle2,
+  Table as TableIcon,
+  Search as SearchIcon,
+  Eye
+} from 'lucide-react';
+import { toast } from 'sonner';
 
 export const AnalyticsView = () => {
   const [stats, setStats] = useState<TrafficStats[]>([]);
+  const [segments, setSegments] = useState<any[]>([]);
+  const [excelData, setExcelData] = useState<ExcelTrafficRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isImporting, setIsImporting] = useState(false);
+  const [excelSearch, setExcelSearch] = useState('');
 
   useEffect(() => {
-    const fetchAnalytics = async () => {
-      const data = await AdminHandler.getTrafficAnalytics();
-      setStats(data);
-      setIsLoading(false);
-    };
-    fetchAnalytics();
+    fetchData();
+    loadExcelRegistry();
   }, []);
+
+  const loadExcelRegistry = async () => {
+    try {
+      const data = await ExcelService.loadTrafficData('/models/TRAFFIC-VOLUME-PER-ROAD-SEGMENT.xlsx');
+      setExcelData(data);
+    } catch (e) {
+      console.warn("Could not load local Excel registry. Check if file exists in /models/");
+    }
+  };
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    const [trafficStats, trafficSegments] = await Promise.all([
+      AdminHandler.getTrafficAnalytics(),
+      AdminHandler.getTrafficSegments()
+    ]);
+    setStats(trafficStats);
+    setSegments(trafficSegments);
+    setIsLoading(false);
+  };
+
+  const handleKMLImport = async (type: 'speed' | 'volume') => {
+    setIsImporting(true);
+    try {
+      // In a real app, this would be a file upload. 
+      // For this demo, we'll fetch the local KML file you provided in /models/
+      const filename = type === 'speed' ? 'VEHICLE SPEED.kml' : 'TRAFFIC VOLUME.kml';
+      const response = await fetch(`/models/${filename}`);
+      if (!response.ok) throw new Error(`KML file not found at /models/${filename}. Ensure it is in public/models/`);
+      
+      const kmlText = await response.text();
+      const parsedSegments = await KMLService.parseKML(kmlText);
+      
+      await AdminHandler.bulkUpsertTrafficSegments(parsedSegments);
+      toast.success(`Successfully imported ${parsedSegments.length} segments from ${filename}`);
+      fetchData();
+    } catch (error: any) {
+      toast.error(`KML Import Failed: ${error.message}`);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const updateSegmentStatus = async (id: string, status: 'heavy' | 'moderate' | 'fluid') => {
+    try {
+      await AdminHandler.updateTrafficStatus(id, status);
+      setSegments(prev => prev.map(s => s.id === id ? { ...s, status } : s));
+      toast.success("Road status updated.");
+    } catch (e) {
+      toast.error("Failed to update segment.");
+    }
+  };
 
   const metrics = [
     { label: 'Avg. Volume', value: '782', unit: 'veh/hr', icon: Car, color: 'text-sky-600', trend: '+12%' },
@@ -128,6 +197,167 @@ export const AnalyticsView = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* --- KML GEOSPATIAL MANAGEMENT --- */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+         {/* KML Importer Card */}
+         <div className="bg-white p-8 rounded-[32px] border-2 border-slate-100 shadow-sm">
+            <div className="flex items-center gap-4 mb-8">
+               <div className="w-14 h-14 bg-sky-50 text-sky-600 rounded-2xl flex items-center justify-center">
+                  <UploadCloud className="w-7 h-7" />
+               </div>
+               <div>
+                  <h3 className="text-lg font-black text-slate-900">Geospatial Data Import</h3>
+                  <p className="text-[10px] font-black text-sky-600 uppercase tracking-widest">KML Model Processor</p>
+               </div>
+            </div>
+
+            <p className="text-xs font-bold text-slate-500 mb-8 leading-relaxed">
+               Sync high-fidelity road networks directly from Google Earth KML models. The system will extract LineString geometries and inject them into the live traffic engine.
+            </p>
+
+            <div className="grid grid-cols-2 gap-4">
+               <button 
+                onClick={() => handleKMLImport('speed')}
+                disabled={isImporting}
+                className="group p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl hover:border-sky-400 hover:bg-sky-50 transition-all text-left"
+               >
+                  <MapIcon className="w-5 h-5 text-slate-400 group-hover:text-sky-600 mb-2 transition-colors" />
+                  <span className="block text-[11px] font-black uppercase text-slate-900">Vehicle Speed</span>
+                  <span className="text-[9px] font-bold text-slate-400">Load .kml Model</span>
+               </button>
+
+               <button 
+                onClick={() => handleKMLImport('volume')}
+                disabled={isImporting}
+                className="group p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl hover:border-amber-400 hover:bg-amber-50 transition-all text-left"
+               >
+                  <Layers className="w-5 h-5 text-slate-400 group-hover:text-amber-600 mb-2 transition-colors" />
+                  <span className="block text-[11px] font-black uppercase text-slate-900">Traffic Volume</span>
+                  <span className="text-[9px] font-bold text-slate-400">Load .kml Model</span>
+               </button>
+            </div>
+         </div>
+
+         {/* Managed Segments CRUD */}
+         <div className="bg-white p-8 rounded-[32px] border-2 border-slate-100 shadow-sm flex flex-col h-[450px]">
+            <div className="flex items-center justify-between mb-6">
+               <div className="flex items-center gap-3">
+                  <Activity className="w-5 h-5 text-emerald-500" />
+                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Managed Network</h3>
+               </div>
+               <span className="text-[10px] font-black bg-slate-100 px-3 py-1 rounded-full text-slate-500">{segments.length} Segments</span>
+            </div>
+
+            <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+               {segments.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center opacity-40">
+                     <FileJson className="w-12 h-12 mb-2" />
+                     <p className="text-[10px] font-black uppercase">No segments imported</p>
+                  </div>
+               ) : segments.map((seg) => (
+                  <div key={seg.id} className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between group hover:border-primary/20 transition-all">
+                     <div>
+                        <h4 className="text-[11px] font-black text-slate-900 truncate max-w-[150px]">{seg.name}</h4>
+                        <p className="text-[9px] font-bold text-slate-400 font-mono">ID: {seg.id}</p>
+                     </div>
+                     <div className="flex items-center gap-2">
+                        <select 
+                          value={seg.status}
+                          onChange={(e) => updateSegmentStatus(seg.id, e.target.value as any)}
+                          className={`text-[9px] font-black uppercase px-2 py-1 rounded-lg border-2 appearance-none cursor-pointer outline-none ${
+                            seg.status === 'heavy' ? 'bg-red-50 border-red-100 text-red-600' :
+                            seg.status === 'moderate' ? 'bg-amber-50 border-amber-100 text-amber-600' :
+                            'bg-emerald-50 border-emerald-100 text-emerald-600'
+                          }`}
+                        >
+                           <option value="fluid">Fluid</option>
+                           <option value="moderate">Moderate</option>
+                           <option value="heavy">Heavy</option>
+                        </select>
+                        <button className="p-1.5 opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-all">
+                           <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                     </div>
+                  </div>
+               ))}
+            </div>
+         </div>
+      </div>
+
+      {/* --- SPREADSHEET REGISTRY (Big Data Browser) --- */}
+      <div className="bg-white p-8 rounded-[38px] border-2 border-slate-100 shadow-sm overflow-hidden">
+         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
+            <div className="flex items-center gap-4">
+               <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
+                  <TableIcon className="w-7 h-7" />
+               </div>
+               <div>
+                  <h3 className="text-lg font-black text-slate-900">Traffic Volume Registry</h3>
+                  <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Local XLSX Model: {excelData.length} Records</p>
+               </div>
+            </div>
+
+            <div className="relative w-full md:w-72">
+               <SearchIcon className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+               <input 
+                 type="text" 
+                 placeholder="Search segments..."
+                 value={excelSearch}
+                 onChange={(e) => setExcelSearch(e.target.value)}
+                 className="w-full pl-10 pr-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl text-[11px] font-bold focus:outline-none focus:border-emerald-500/20 focus:ring-4 focus:ring-emerald-500/5 transition-all"
+               />
+            </div>
+         </div>
+
+         <div className="overflow-x-auto rounded-[24px] border border-slate-100">
+            <table className="w-full text-left border-collapse">
+               <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100">
+                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Road Name</th>
+                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Coordinates</th>
+                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Volume</th>
+                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Status</th>
+                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Actions</th>
+                  </tr>
+               </thead>
+               <tbody className="divide-y divide-slate-100">
+                  {excelData.filter(row => 
+                    Object.values(row).some(val => String(val).toLowerCase().includes(excelSearch.toLowerCase()))
+                  ).slice(0, 15).map((row, i) => (
+                    <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                       <td className="px-6 py-4">
+                          <span className="text-xs font-black text-slate-900">{row['Road Name'] || 'Unnamed Corridor'}</span>
+                       </td>
+                       <td className="px-6 py-4">
+                          <span className="text-[10px] font-mono font-bold text-slate-400">{row['Coordinates'] || 'Lat/Lng Missing'}</span>
+                       </td>
+                       <td className="px-6 py-4">
+                          <span className="text-[11px] font-bold text-slate-700">{row['Traffic Volume'] || row['volume'] || '0'}</span>
+                       </td>
+                       <td className="px-6 py-4">
+                          <span className="text-[9px] font-black uppercase px-3 py-1 bg-sky-50 text-sky-600 rounded-full border border-sky-100">
+                             {row['Status'] || 'Synced'}
+                          </span>
+                       </td>
+                       <td className="px-6 py-4">
+                          <button className="p-2 text-slate-400 hover:text-primary hover:bg-white rounded-xl shadow-sm transition-all border border-transparent hover:border-slate-100 active:scale-95">
+                             <Eye className="w-4 h-4" />
+                          </button>
+                       </td>
+                    </tr>
+                  ))}
+               </tbody>
+            </table>
+            {excelData.length > 15 && (
+               <div className="p-4 bg-slate-50/50 text-center">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest py-2 block">
+                     Displaying first 15 records of {excelData.length} total. Use search to filter.
+                  </span>
+               </div>
+            )}
+         </div>
       </div>
     </div>
   );

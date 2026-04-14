@@ -10,7 +10,8 @@ import {
   BarChart3, 
   ShieldAlert,
   LogOut,
-  Users
+  Users,
+  Settings as SettingsIcon
 } from 'lucide-react';
 import { APP_ROUTES } from '../../src/constants/routes';
 import { useSearchParams } from 'next/navigation';
@@ -39,8 +40,10 @@ export const AdminSidebar = () => {
   const navItems = [
     { label: 'Overview', icon: LayoutDashboard, href: APP_ROUTES.ADMIN.DASHBOARD },
     { label: 'Monitoring', icon: ShieldAlert, iconColor: 'text-emergency', href: APP_ROUTES.ADMIN.MONITORING },
+    { label: 'Prone Areas', icon: MapPin, href: '/admin?tab=prone-areas' },
     { label: 'Analytics', icon: BarChart3, href: APP_ROUTES.ADMIN.ANALYTICS },
     { label: 'Users', icon: Users, href: APP_ROUTES.ADMIN.USERS },
+    { label: 'Settings', icon: SettingsIcon, href: '/admin?tab=settings' },
   ];
 
   return (

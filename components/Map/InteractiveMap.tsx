@@ -5,10 +5,15 @@ import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, Polygon, useM
 import L from 'leaflet';
 import establishmentsData from '../../public/establishment.json';
 import { Incident } from '../../src/types/incident';
+import { toast } from 'sonner';
+import { AdminHandler } from '../../src/agents/AdminDashboardAgent/AdminHandler';
+import { ProneArea } from '../../src/types/prone_area';
+import { AlertTriangle, Flame, Droplets, Car } from 'lucide-react';
+import { renderToStaticMarkup } from 'react-dom/server';
 
 
 interface InteractiveMapProps {
-  overlayMode: 'none' | 'flood' | 'typhoon' | 'route' | 'report' | 'explore' | 'emergency';
+  overlayMode: 'none' | 'flood' | 'typhoon' | 'route' | 'report' | 'explore' | 'emergency' | 'traffic';
   reportPin?: { lat: number; lng: number } | null;
   searchPin?: { lat: number; lng: number; label?: string } | null;
   focusPin?: {
@@ -21,6 +26,8 @@ interface InteractiveMapProps {
   forceOpen?: boolean;
   onReset?: () => void;
   onLocationSelect?: (lat: number, lng: number, label: string) => void;
+  selectedFacility?: { lat: number, lng: number } | null;
+  incidentPin?: { lat: number, lng: number } | null;
 }
 
 type FloodTileLevel = 'low' | 'medium' | 'high';
@@ -29,6 +36,7 @@ interface FloodTile {
   positions: [number, number][];
   level: FloodTileLevel;
 }
+
 
 const floodHeatColors: Record<FloodTileLevel, { fill: string; stroke: string; opacity: number }> = {
   low: { fill: '#FDE047', stroke: '#FBBF24', opacity: 0.42 },
@@ -56,6 +64,30 @@ const floodCorridors: Array<[[number, number], [number, number]]> = [
   [[14.92, 120.40], [15.18, 120.72]],
   [[14.84, 120.56], [15.24, 120.62]],
 ];
+
+const trafficThoroughfares = [
+  {
+    name: "Jose Abad Santos Ave (East-West)",
+    path: [[15.0333, 120.6500], [15.0333, 120.7200]] as [number, number][],
+    status: 'heavy',
+  },
+  {
+    name: "MacArthur Highway (Main North)",
+    path: [[14.9800, 120.6898], [15.0286, 120.6898], [15.0800, 120.6898]] as [number, number][],
+    status: 'moderate',
+  },
+  {
+    name: "Olongapo-Gapan Road",
+    path: [[15.0333, 120.6833], [15.1000, 120.8000]] as [number, number][],
+    status: 'fluid',
+  }
+];
+
+const trafficColors: Record<string, string> = {
+  heavy: "#ef4444", // Red
+  moderate: "#f59e0b", // Amber
+  fluid: "#22c55e", // Green
+};
 
 const createTile = (centerLat: number, centerLng: number, sizeLat: number, sizeLng: number): [number, number][] => {
   const halfLat = sizeLat / 2;
@@ -169,14 +201,14 @@ const getIconForType = (type: string) => {
   if (iconCache[type]) return iconCache[type];
 
   let colorClass = "bg-primary shadow-primary/40";
-  let svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1z"/></svg>`; // Shield
+  let svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1z"/></svg>`; // Shield
 
   if (type === "Healthcare Facility") {
     colorClass = "bg-rose-500 shadow-rose-500/40";
-    svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`; // Heart
+    svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`; // Heart
   } else if (type === "Emergency Service") {
     colorClass = "bg-red-500 shadow-red-500/40";
-    svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>`; // Flame
+    svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>`; // Flame
   } else if (type === "Government Office") {
     colorClass = "bg-blue-600 shadow-blue-600/40";
   }
@@ -207,7 +239,7 @@ const TyphoonEyeIcon = L.divIcon({
       <div class="absolute inset-0 rounded-full bg-red-500/20 animate-ping duration-[3000ms]"></div>
       <div class="absolute inset-0 rounded-full border-4 border-dashed border-red-600 animate-spin duration-[10000ms]"></div>
       <div class="absolute inset-1/4 rounded-full bg-red-600 border-2 border-white shadow-lg flex items-center justify-center text-white">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><circle cx="12" cy="12" r="3"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><circle cx="12" cy="12" r="3"/></svg>
       </div>
     </div>
   `,
@@ -221,7 +253,7 @@ const ReportPinIcon = L.divIcon({
     <div class="relative w-12 h-12 -ml-6 -mt-12 group cursor-pointer drop-shadow-xl animate-bounce">
       <div class="absolute inset-0 bg-red-600/20 rounded-xl translate-y-1 blur-[3px]"></div>
       <div class="relative w-12 h-12 rounded-[14px] bg-red-600 text-white flex items-center justify-center border-[3px] border-white z-10">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
       </div>
       <div class="absolute -bottom-1.5 left-1/2 w-0 h-0 border-l-4 border-r-4 border-t-8 border-transparent border-t-white -translate-x-1/2 z-10"></div>
       <div class="absolute -bottom-2 left-1/2 w-6 h-2 bg-black/20 blur-[2px] rounded-full -translate-x-1/2"></div>
@@ -237,7 +269,7 @@ const OpenIncidentIcon = L.divIcon({
     <div class="relative w-10 h-10 -ml-5 -mt-10">
       <div class="absolute inset-0 rounded-full bg-red-500/30 animate-ping"></div>
       <div class="absolute inset-0 rounded-full bg-red-600 border-2 border-white flex items-center justify-center text-white shadow-lg">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
       </div>
     </div>
   `,
@@ -251,7 +283,7 @@ const SearchPinIcon = L.divIcon({
     <div class="relative w-12 h-12 -ml-6 -mt-12 group cursor-pointer drop-shadow-xl animate-in zoom-in-50 duration-500">
       <div class="absolute inset-0 bg-primary/20 rounded-xl translate-y-1 blur-[3px]"></div>
       <div class="relative w-12 h-12 rounded-[14px] bg-primary text-white flex items-center justify-center border-[3px] border-white z-10 transition-transform group-hover:-translate-y-1">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="11" r="3"/><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 0 1-2.827 0l-4.244-4.243a8 8 0 1 1 11.314 0z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="11" r="3"/><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 0 1-2.827 0l-4.244-4.243a8 8 0 1 1 11.314 0z"/></svg>
       </div>
       <div class="absolute -bottom-1.5 left-1/2 w-0 h-0 border-l-4 border-r-4 border-t-8 border-transparent border-t-white -translate-x-1/2 z-10 transition-transform group-hover:-translate-y-1"></div>
     </div>
@@ -306,7 +338,9 @@ export default function InteractiveMap({
   forceTab,
   forceOpen,
   onReset,
-  onLocationSelect
+  onLocationSelect,
+  selectedFacility,
+  incidentPin
 }: InteractiveMapProps) {
   const [isMounted, setIsMounted] = React.useState(false);
   const [liveTyphoon, setLiveTyphoon] = React.useState<{ 
@@ -324,6 +358,19 @@ export default function InteractiveMap({
     setIsMounted(true);
   }, []);
 
+  const [liveProneAreas, setLiveProneAreas] = React.useState<ProneArea[]>([]);
+  const [liveTrafficSegments, setLiveTrafficSegments] = React.useState<any[]>([]);
+
+  const fetchLiveProneAreas = React.useCallback(async () => {
+    const data = await AdminHandler.getProneAreas();
+    setLiveProneAreas(data);
+  }, []);
+
+  const fetchLiveTraffic = React.useCallback(async () => {
+    const data = await AdminHandler.getTrafficSegments();
+    if (data.length > 0) setLiveTrafficSegments(data);
+  }, []);
+
   // Fetch real-time typhoon data from our new API
   React.useEffect(() => {
     if (!isMounted) return;
@@ -339,11 +386,50 @@ export default function InteractiveMap({
       }
     };
     fetchTyphoon();
-  }, [isMounted]);
+    fetchLiveProneAreas();
+    fetchLiveTraffic();
+  }, [isMounted, fetchLiveProneAreas, fetchLiveTraffic]);
 
-  // Center roughly to the establishments data
-  const center: [number, number] = [15.0589, 120.6460];
+  const [routePoints, setRoutePoints] = React.useState<[number, number][]>([]);
+
+  // Realistic Route Generator (Grid-based Manhattan Path)
+  const generateRealisticRoute = React.useCallback((start: [number, number], end: [number, number]) => {
+     // Create a 4-point grid path to look like street driving
+     const midLat = start[0];
+     const midLng = end[1];
+     
+     // Add slight jitter for realism
+     const points: [number, number][] = [
+       start,
+       [midLat, midLng], // Turn 1
+       end
+     ];
+     setRoutePoints(points);
+  }, []);
+
+  React.useEffect(() => {
+    if (overlayMode === 'route' && selectedFacility && incidentPin) {
+       generateRealisticRoute(
+         [selectedFacility.lat, selectedFacility.lng],
+         [incidentPin.lat, incidentPin.lng]
+       );
+    }
+  }, [overlayMode, selectedFacility, incidentPin, generateRealisticRoute]);
+
+  // Center specifically to San Fernando, Pampanga as requested
+  const center: [number, number] = [15.0286, 120.6898];
   const [localSearchPin, setLocalSearchPin] = React.useState<{ lat: number, lng: number, label?: string } | null>(null);
+
+  // Geographic boundary for San Fernando validation (Radius approx 10km)
+  const SAN_FERNANDO_BOUNDS = {
+    minLat: 14.95, maxLat: 15.10,
+    minLng: 120.60, maxLng: 120.78
+  };
+
+  const isWithinSanFernando = (lat: number, lng: number) => {
+    return lat >= SAN_FERNANDO_BOUNDS.minLat && lat <= SAN_FERNANDO_BOUNDS.maxLat &&
+           lng >= SAN_FERNANDO_BOUNDS.minLng && lng <= SAN_FERNANDO_BOUNDS.maxLng;
+  };
 
   if (!isMounted) {
     return (
@@ -363,6 +449,12 @@ export default function InteractiveMap({
   const attribution = '&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; OpenStreetMap contributors';
 
   const handleLocationSelect = (lat: number, lng: number, label: string) => {
+    const isLocal = isWithinSanFernando(lat, lng);
+    if (!isLocal && label === "Your Current Location") {
+      toast.warning("You are currently outside San Fernando. Emergency response metrics may be limited.", {
+        description: "Focusing map on your external position."
+      });
+    }
     setLocalSearchPin({ lat, lng, label });
   };
 
@@ -377,13 +469,6 @@ export default function InteractiveMap({
     : (liveTyphoon ? [liveTyphoon.lat, liveTyphoon.lng] : [14.9500, 120.8000]);
   const typhoonRadius = liveTyphoon ? (liveTyphoon.speed * 1000) : 15000;
   const typhoonName = liveTyphoon?.name || "Simulated Tropical Storm";
-
-  // Simulated Routing (From arbitrary A to arbitrary B, simulating routing to hospital)
-  const routePoints: [number, number][] = [
-    [15.0589, 120.6460], // Start Center
-    [15.0650, 120.6600],
-    [15.0812, 120.6618], // Ricardo P. Rodriguez Hospital
-  ];
 
   return (
     <div
@@ -417,11 +502,24 @@ export default function InteractiveMap({
             icon={getIconForType(est["Establishment Type"])}
           >
             <Popup className="font-inter">
-              <div className="text-center">
-                <p className="text-xs font-black text-slate-900 mb-1">{est.Name}</p>
-                <span className="text-[10px] font-bold px-2 py-1 bg-slate-100 rounded-full text-slate-600 uppercase">
-                  {est["Establishment Type"]}
-                </span>
+              <div className="flex flex-col items-center">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{est["Establishment Type"]}</p>
+                <p className="text-sm font-black text-slate-900 leading-tight mb-4 text-center">{est.Name}</p>
+                
+                <button 
+                  onClick={() => {
+                    if (onLocationSelect) {
+                      onLocationSelect(est.Latitude, est.Longitude, est.Name);
+                    }
+                    if (onOverlayModeChange) {
+                      onOverlayModeChange('route');
+                    }
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                  Get Directions
+                </button>
               </div>
             </Popup>
           </Marker>
@@ -537,10 +635,145 @@ export default function InteractiveMap({
 
         {/* Route Overlay */}
         {overlayMode === 'route' && (
-          <Polyline
-            positions={routePoints}
-            pathOptions={{ color: '#059669', weight: 6, opacity: 0.8 }}
-          />
+          <>
+            <Polyline
+              positions={routePoints}
+              pathOptions={{ color: '#059669', weight: 6, opacity: 0.8 }}
+            />
+            {incidentPin && (
+              <>
+                <Circle 
+                  center={[incidentPin.lat, incidentPin.lng]} 
+                  radius={500} 
+                  pathOptions={{ fillColor: '#ef4444', fillOpacity: 0.1, color: '#ef4444', weight: 1, dashArray: '5, 5' }} 
+                />
+                <Marker position={[incidentPin.lat, incidentPin.lng]} icon={ReportPinIcon}>
+                  <Popup className="font-inter">
+                    <div className="text-center">
+                        <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-1">Incident Start</p>
+                        <p className="text-xs font-bold text-slate-700">Your Current Location</p>
+                    </div>
+                  </Popup>
+                </Marker>
+              </>
+            )}
+            {selectedFacility && (
+              <Marker position={[selectedFacility.lat, selectedFacility.lng]} icon={getIconForType("Healthcare Facility")}>
+                <Popup className="font-inter">
+                   <div className="text-center">
+                      <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">Route Destination</p>
+                      <p className="text-xs font-bold text-slate-700">Medical Facility</p>
+                   </div>
+                </Popup>
+              </Marker>
+            )}
+            {/* Auto-focus on the route */}
+            <MapController focusPin={selectedFacility} />
+          </>
+        )}
+
+        {/* Admin-Designated Prone Areas (Live from Firestore/Mock) */}
+        {liveProneAreas.map((area) => (
+          <React.Fragment key={area.id}>
+            <Circle
+              center={[area.lat, area.lng]}
+              radius={area.radius}
+              pathOptions={{
+                fillColor: area.status === 'Unfixed' ? 
+                  (area.category === 'Fire' ? '#ef4444' : area.category === 'Flood' ? '#2563eb' : '#f59e0b') 
+                  : '#059669',
+                fillOpacity: 0.25,
+                color: area.status === 'Unfixed' ? '#dc2626' : '#059669',
+                weight: 3,
+                dashArray: area.status === 'Unfixed' ? '10, 10' : '0'
+              }}
+            >
+              <Popup className="font-inter">
+                <div className="min-w-[220px]">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`w-2 h-2 rounded-full ${area.status === 'Unfixed' ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`}></span>
+                      <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{area.category} Zone</span>
+                    </div>
+                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                      area.status === 'Unfixed' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                    }`}>
+                      {area.status}
+                    </span>
+                  </div>
+                  <h4 className="text-sm font-black text-slate-900 mb-1">{area.name}</h4>
+                  <p className="text-[10px] font-bold text-slate-500 leading-relaxed italic border-l-2 border-slate-200 pl-2 py-1 bg-slate-50">
+                    "{area.notes}"
+                  </p>
+                  <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-[9px] font-black text-slate-400">REF: {area.id?.substring(0, 8)}</span>
+                    <span className="text-[9px] font-bold text-slate-400">
+                      {area.updatedAt instanceof Date ? area.updatedAt.toLocaleDateString() : area.updatedAt && 'seconds' in area.updatedAt ? new Date(area.updatedAt.seconds * 1000).toLocaleDateString() : ''}
+                    </span>
+                  </div>
+                </div>
+              </Popup>
+            </Circle>
+            {/* Category Icon at Center */}
+            <Marker 
+              position={[area.lat, area.lng]}
+              icon={L.divIcon({
+                className: 'custom-category-icon',
+                html: renderToStaticMarkup(
+                  <div className={`p-1.5 rounded-full bg-white shadow-lg border-2 ${
+                    area.category === 'Fire' ? 'border-red-500 text-red-500' : 
+                    area.category === 'Flood' ? 'border-blue-500 text-blue-500' : 
+                    area.category === 'Accident' ? 'border-amber-500 text-amber-500' : 'border-slate-500 text-slate-500'
+                  }`}>
+                    {area.category === 'Fire' ? <Flame size={12} strokeWidth={3} /> : 
+                     area.category === 'Flood' ? <Droplets size={12} strokeWidth={3} /> : 
+                     area.category === 'Accident' ? <Car size={12} strokeWidth={3} /> : <AlertTriangle size={12} strokeWidth={3} />}
+                  </div>
+                ),
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+              })}
+            />
+          </React.Fragment>
+        ))}
+
+        {/* --- LIVE TRAFFIC TELEMETRY (Merged with KML Data) --- */}
+        {(overlayMode === 'traffic' || overlayMode === 'emergency') && (
+          (liveTrafficSegments.length > 0 ? liveTrafficSegments : trafficThoroughfares).map((road, i) => (
+            <React.Fragment key={`traffic-${i}`}>
+              <Polyline
+                positions={road.path}
+                pathOptions={{
+                  color: trafficColors[road.status] || '#22c55e',
+                  weight: 8,
+                  opacity: 0.15,
+                }}
+              />
+              <Polyline
+                positions={road.path}
+                pathOptions={{
+                  color: trafficColors[road.status] || '#22c55e',
+                  weight: 4,
+                  opacity: 0.8,
+                  lineCap: 'round',
+                  dashArray: road.status === 'heavy' ? '1, 15' : '0'
+                }}
+              >
+                <Popup>
+                  <div className="font-inter">
+                    <p className="text-[10px] font-black uppercase text-slate-400">Road Telemetry</p>
+                    <p className="text-xs font-bold text-slate-900">{road.name}</p>
+                    <p className={`text-[11px] font-black uppercase mt-1 ${
+                      road.status === 'heavy' ? 'text-red-600' : 
+                      road.status === 'moderate' ? 'text-amber-600' : 'text-emerald-600'
+                    }`}>
+                      Status: {road.status || 'fluid'}
+                    </p>
+                  </div>
+                </Popup>
+              </Polyline>
+            </React.Fragment>
+          ))
         )}
 
         {/* Live unresolved incidents from Firestore */}
@@ -577,7 +810,7 @@ export default function InteractiveMap({
           <Marker position={[activeSearchPin.lat, activeSearchPin.lng]} icon={SearchPinIcon}>
             <Popup className="font-inter">
               <div className="text-center p-1">
-                <p className="text-[10px] font-black text-primary uppercase tracking-[0.15em] mb-1">Destination</p>
+                <p className="text-[10px] font-black text-primary uppercase tracking-[0.15em] mb-1">Focus Location</p>
                 <p className="text-xs font-bold text-slate-900 leading-tight">
                   {activeSearchPin.label || "Searched Location"}
                 </p>
@@ -615,10 +848,11 @@ export default function InteractiveMap({
       <div className="absolute top-24 right-8 bottom-24 z-[1001] w-full max-w-[450px] pointer-events-auto flex flex-col justify-center animate-in slide-in-from-right-8 duration-500">
         <RiskLevelPanel
           selectedLocation={focusPin || activeSearchPin}
-          onLocationSelect={handleLocationSelect || handleLocationSelect}
+          onLocationSelect={handleLocationSelect}
           onReset={onReset || handleReset}
           reportedIncidents={reportedIncidents}
           onToggleRadar={(type) => onOverlayModeChange && onOverlayModeChange(type as any)}
+          overlayMode={overlayMode}
           forceTab={forceTab}
           forceOpen={forceOpen}
           typhoonName={typhoonName}

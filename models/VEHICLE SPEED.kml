@@ -1,0 +1,443 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
+<Document id="1l_JgLRf_79sUYLjILg_6yoaz6jTuJdrA">
+	<name>VEHICLE SPEED</name>
+	<gx:CascadingStyle kml:id="__managed_style_2207B791E63EBF947530">
+		<Style>
+			<IconStyle>
+				<scale>1.2</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>18</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_1F5D1F6D913EBF947530">
+		<Style>
+			<IconStyle>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>12</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<StyleMap id="__managed_style_06C2A795863EBF947530">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_1F5D1F6D913EBF947530</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_2207B791E63EBF947530</styleUrl>
+		</Pair>
+	</StyleMap>
+	<gx:CascadingStyle kml:id="__managed_style_1BC4BD00153EBF94752F">
+		<Style>
+			<IconStyle>
+				<scale>1.2</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>6</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_01DFA8F7C23EBF94752F">
+		<Style>
+			<IconStyle>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>4</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<StyleMap id="__managed_style_0B9C06817D3EBF94752E">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_01DFA8F7C23EBF94752F</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_1BC4BD00153EBF94752F</styleUrl>
+		</Pair>
+	</StyleMap>
+	<Placemark id="08772023053879AB5F94">
+		<name>San Fernando City, Central Luzon</name>
+		<visibility>0</visibility>
+		<Camera>
+			<gx:ViewerOptions>
+				<gx:option name="streetview"></gx:option>
+				<gx:streetViewPanoId>MzBdoi3Z0DdVtBkKDnMn1Q</gx:streetViewPanoId>
+			</gx:ViewerOptions>
+			<longitude>120.6759933307371</longitude>
+			<latitude>15.04754741090634</latitude>
+			<altitude>12.41609001159668</altitude>
+			<heading>344.5534393436723</heading>
+			<tilt>70.95346040089302</tilt>
+			<roll>0</roll>
+			<gx:fovy>59.99996129067124</gx:fovy>
+			<altitudeMode>absolute</altitudeMode>
+		</Camera>
+		<styleUrl>#__managed_style_0B9C06817D3EBF94752E</styleUrl>
+		<Point>
+			<extrude>1</extrude>
+			<coordinates>120.6759933307371,15.04754741090634,0</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0145E2A4CA3879AB63F4">
+		<name>San Fernando City, Central Luzon</name>
+		<visibility>0</visibility>
+		<Camera>
+			<gx:ViewerOptions>
+				<gx:option name="streetview"></gx:option>
+				<gx:streetViewPanoId>MzBdoi3Z0DdVtBkKDnMn1Q</gx:streetViewPanoId>
+			</gx:ViewerOptions>
+			<longitude>120.6759933307371</longitude>
+			<latitude>15.04754741090634</latitude>
+			<altitude>12.41609001159668</altitude>
+			<heading>344.5534393436723</heading>
+			<tilt>70.95346040089302</tilt>
+			<roll>0</roll>
+			<gx:fovy>59.99996129067124</gx:fovy>
+			<altitudeMode>absolute</altitudeMode>
+		</Camera>
+		<styleUrl>#__managed_style_0B9C06817D3EBF94752E</styleUrl>
+		<Point>
+			<extrude>1</extrude>
+			<coordinates>120.6759933307371,15.04754741090634,0</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="03BDA6899E3E8DFAD4DC">
+		<name>ROAD SEGMENT 1</name>
+		<LookAt>
+			<longitude>120.6791629067742</longitude>
+			<latitude>15.03780001885272</latitude>
+			<altitude>6.030181468480757</altitude>
+			<heading>42.40255700991046</heading>
+			<tilt>7.701669685198941</tilt>
+			<gx:fovy>30.00000000000119</gx:fovy>
+			<range>1243.55376462554</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_06C2A795863EBF947530</styleUrl>
+		<LineString>
+			<coordinates>
+				120.679930315207,15.03812787649843,0 120.6791910319269,15.03719173925537,0 120.6789578978465,15.03690754608653,0 120.6788134043626,15.03668636958497,0 120.6787625655669,15.03661275289174,0 
+			</coordinates>
+		</LineString>
+	</Placemark>
+	<Placemark id="060A25F73F3E8DFCF489">
+		<name>ROAD SEGMENT 2</name>
+		<LookAt>
+			<longitude>120.68248160626</longitude>
+			<latitude>15.03740292636851</latitude>
+			<altitude>6.261469329160684</altitude>
+			<heading>41.15059154758709</heading>
+			<tilt>32.29838496399197</tilt>
+			<gx:fovy>30.00000000000119</gx:fovy>
+			<range>2584.258198465104</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_06C2A795863EBF947530</styleUrl>
+		<LineString>
+			<coordinates>
+				120.6812779529866,15.03867303723126,0 120.6819069529122,15.03818946007775,0 120.682297209273,15.03785506772661,0 120.6825463312731,15.03767135132818,0 120.6827278807565,15.03750008340521,0 
+			</coordinates>
+		</LineString>
+	</Placemark>
+	<Placemark id="032AF63B423E8DFD6ECF">
+		<name>ROAD SEGMENT 3</name>
+		<LookAt>
+			<longitude>120.68248160626</longitude>
+			<latitude>15.03740292636851</latitude>
+			<altitude>6.261469329160684</altitude>
+			<heading>41.15059154758709</heading>
+			<tilt>32.29838496399197</tilt>
+			<gx:fovy>30.00000000000119</gx:fovy>
+			<range>2584.258198465104</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_06C2A795863EBF947530</styleUrl>
+		<LineString>
+			<coordinates>
+				120.6816535085071,15.03959046787367,0 120.6822466869543,15.0401887069761,0 120.6827783481477,15.04063699012473,0 120.6830256766239,15.04086116892365,0 
+			</coordinates>
+		</LineString>
+	</Placemark>
+	<Placemark id="0E1B6EFE403E8E011777">
+		<name>ROAD SEGMENT 4</name>
+		<LookAt>
+			<longitude>120.6770423585869</longitude>
+			<latitude>15.03056082034311</latitude>
+			<altitude>5.084259317674247</altitude>
+			<heading>41.14970990916398</heading>
+			<tilt>32.29354062330096</tilt>
+			<gx:fovy>30.00000000000119</gx:fovy>
+			<range>1575.791950123385</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_06C2A795863EBF947530</styleUrl>
+		<LineString>
+			<coordinates>
+				120.6755319381361,15.03035267069948,0 120.6757962551134,15.02929517851392,0 120.6759358381201,15.0286306820112,0 120.6759688631242,15.02849924422529,0 
+			</coordinates>
+		</LineString>
+	</Placemark>
+	<Placemark id="0166A4B4B03E8DF87A48">
+		<name>ROAD SEGMENT 5</name>
+		<LookAt>
+			<longitude>120.6886175181102</longitude>
+			<latitude>15.02578094394903</latitude>
+			<altitude>2.78165998609357</altitude>
+			<heading>42.40382556198845</heading>
+			<tilt>7.701301114719763</tilt>
+			<gx:fovy>30.00000000000119</gx:fovy>
+			<range>937.6828797113558</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_06C2A795863EBF947530</styleUrl>
+		<LineString>
+			<coordinates>
+				120.6894846052659,15.02561175218795,0 120.688850555548,15.02552712536503,0 120.6882648957878,15.02543093641494,0 120.6879570093753,15.02541752888835,0 120.6877873134994,15.0253662371425,0 120.6875455101243,15.02535909642691,0 
+			</coordinates>
+		</LineString>
+	</Placemark>
+	<Placemark id="081DA7DB073E8DF2A44B">
+		<name>ROAD SEGMENT 8</name>
+		<LookAt>
+			<longitude>120.6946907539882</longitude>
+			<latitude>15.02925614600279</latitude>
+			<altitude>3.52059692706076</altitude>
+			<heading>43.41313174020866</heading>
+			<tilt>9.974846226745425</tilt>
+			<gx:fovy>30.00000000000119</gx:fovy>
+			<range>733.0390011209967</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_06C2A795863EBF947530</styleUrl>
+		<LineString>
+			<coordinates>
+				120.6940205408553,15.02835938033797,0 120.6942855425461,15.02868019224538,0 120.6944404550691,15.0289844794042,0 120.694522961707,15.02931291867699,0 120.6945454669282,15.02964466711599,0 120.6945660634833,15.02991106532246,0 120.6945340538868,15.03012081900304,0 
+			</coordinates>
+		</LineString>
+	</Placemark>
+	<Placemark id="06002AC57E3E8DFE31E4">
+		<name>ROAD SEGMENT 10</name>
+		<LookAt>
+			<longitude>120.6876549462599</longitude>
+			<latitude>15.03490888555032</latitude>
+			<altitude>4.026177198651848</altitude>
+			<heading>41.1509805799213</heading>
+			<tilt>32.29340176101986</tilt>
+			<gx:fovy>30.00000000000119</gx:fovy>
+			<range>1546.884106518701</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_06C2A795863EBF947530</styleUrl>
+		<LineString>
+			<coordinates>
+				120.688352139941,15.03334929258154,0 120.6889924057282,15.03331440841714,0 120.689437723603,15.03325816382883,0 120.6898364099423,15.03324546187775,0 120.6900787453491,15.03320464041882,0 120.6902659301398,15.03319548496909,0 
+			</coordinates>
+		</LineString>
+	</Placemark>
+	<Placemark id="07109666CD3E8E0A935B">
+		<name>ROAD SEGMENT 6</name>
+		<LookAt>
+			<longitude>120.6905420539212</longitude>
+			<latitude>15.02657057173686</latitude>
+			<altitude>3.471902134721863</altitude>
+			<heading>41.2495636235727</heading>
+			<tilt>32.28964308724739</tilt>
+			<gx:fovy>30.00000000000119</gx:fovy>
+			<range>764.4259671084001</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_06C2A795863EBF947530</styleUrl>
+		<LineString>
+			<coordinates>
+				120.6901424391424,15.02590080527876,0 120.6905762699326,15.02640438363699,0 120.6908660137739,15.02675588954148,0 120.6910940221666,15.02700940163825,0 120.6912584333704,15.02720113453375,0 120.6913516274296,15.02731601030324,0 
+			</coordinates>
+		</LineString>
+	</Placemark>
+	<Placemark id="0A7BBB6AC33E8E0B2946">
+		<name>ROAD SEGMENT 7</name>
+		<LookAt>
+			<longitude>120.6911098057165</longitude>
+			<latitude>15.02606331400204</latitude>
+			<altitude>3.223585486385365</altitude>
+			<heading>41.25073546997871</heading>
+			<tilt>32.28884048831281</tilt>
+			<gx:fovy>30.00000000000119</gx:fovy>
+			<range>597.3457920244256</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_06C2A795863EBF947530</styleUrl>
+		<LineString>
+			<coordinates>
+				120.6906463601302,15.02545542046191,0 120.6915521147674,15.02636593673392,0 120.6917603707293,15.02654186649695,0 120.691925019068,15.02665851121714,0 120.6919869245013,15.0267133799128,0 
+			</coordinates>
+		</LineString>
+	</Placemark>
+	<Placemark id="04A0465B5C3E8E0CE05C">
+		<name>ROAD SEGMENT 9</name>
+		<LookAt>
+			<longitude>120.6911644458834</longitude>
+			<latitude>15.03075003968818</latitude>
+			<altitude>3.938536113113562</altitude>
+			<heading>41.25063773535957</heading>
+			<tilt>32.28818707808424</tilt>
+			<gx:fovy>30.00000000000119</gx:fovy>
+			<range>461.3228583993623</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_06C2A795863EBF947530</styleUrl>
+		<LineString>
+			<coordinates>
+				120.6925692393848,15.02898192083937,0 120.6918466593162,15.02962933385561,0 120.6914800122125,15.02996637211817,0 120.6912303046631,15.03019875745018,0 120.6911775123214,15.03025446950156,0 
+			</coordinates>
+		</LineString>
+	</Placemark>
+	<Placemark id="037E7274B13E8E0EE3AC">
+		<name>ROAD SEGMENT 11</name>
+		<LookAt>
+			<longitude>120.6868649334266</longitude>
+			<latitude>15.03463740477753</latitude>
+			<altitude>4.567006851465538</altitude>
+			<heading>359.9999987868522</heading>
+			<tilt>0</tilt>
+			<gx:fovy>30.00000000004406</gx:fovy>
+			<range>2373.090428272554</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_06C2A795863EBF947530</styleUrl>
+		<LineString>
+			<coordinates>
+				120.6867431322838,15.03414775921459,0 120.6860402687128,15.03470011980511,0 120.6854008657292,15.03522360647082,0 120.6852698587749,15.0353552393935,0 
+			</coordinates>
+		</LineString>
+	</Placemark>
+	<Placemark id="0857AAA7A23E8E152F86">
+		<name>ROAD SEGMENT 12</name>
+		<LookAt>
+			<longitude>120.6734310007694</longitude>
+			<latitude>15.04497911524938</latitude>
+			<altitude>9.970098479311254</altitude>
+			<heading>41.25028131168106</heading>
+			<tilt>32.29110905372956</tilt>
+			<gx:fovy>30.00000000000119</gx:fovy>
+			<range>1069.603100118547</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_06C2A795863EBF947530</styleUrl>
+		<LineString>
+			<coordinates>
+				120.6719260001908,15.04531354974422,0 120.672973454523,15.04462321183343,0 120.6733511554768,15.04437599111608,0 120.6734868719711,15.04428867489544,0 
+			</coordinates>
+		</LineString>
+	</Placemark>
+	<Placemark id="02BC03647A3E8E15BF24">
+		<name>ROAD SEGMENT 13</name>
+		<LookAt>
+			<longitude>120.6635167045968</longitude>
+			<latitude>15.05216656404249</latitude>
+			<altitude>17.98085467221069</altitude>
+			<heading>41.24788807393853</heading>
+			<tilt>32.28833064853823</tilt>
+			<gx:fovy>30.00000000000119</gx:fovy>
+			<range>491.2116243641505</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_06C2A795863EBF947530</styleUrl>
+		<LineString>
+			<coordinates>
+				120.6629863848054,15.05246507351255,0 120.6634442422244,15.05195407831372,0 120.6638311336497,15.05154522381844,0 120.6640395392874,15.05132842002297,0 120.664111184561,15.05125450491635,0 120.6641573411205,15.05121693429837,0 120.6641989616507,15.05117903071193,0 120.6642294039691,15.05114945163831,0 120.6642685798664,15.05111315556849,0 
+			</coordinates>
+		</LineString>
+	</Placemark>
+	<Placemark id="0A327D64993E8E18ACC8">
+		<name>ROAD SEGMENT 14</name>
+		<LookAt>
+			<longitude>120.6087554364777</longitude>
+			<latitude>15.11443474337697</latitude>
+			<altitude>67.14991595724821</altitude>
+			<heading>41.24147671545493</heading>
+			<tilt>32.2926186551485</tilt>
+			<gx:fovy>30.00000000000119</gx:fovy>
+			<range>1383.875679379853</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_06C2A795863EBF947530</styleUrl>
+		<LineString>
+			<coordinates>
+				120.6089738937986,15.11426796037881,0 120.6096955510882,15.11342429372339,0 120.6102288438103,15.11279189280303,0 
+			</coordinates>
+		</LineString>
+	</Placemark>
+	<Placemark id="055334318A3E8E178D06">
+		<name>ROAD SEGMENT 15</name>
+		<LookAt>
+			<longitude>120.6409376120486</longitude>
+			<latitude>15.07907236497999</latitude>
+			<altitude>36.77357976382608</altitude>
+			<heading>41.24493248012953</heading>
+			<tilt>32.29077069464291</tilt>
+			<gx:fovy>30.00000000000119</gx:fovy>
+			<range>999.1698059489136</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_06C2A795863EBF947530</styleUrl>
+		<LineString>
+			<coordinates>
+				120.6406705761217,15.07767230384203,0 120.6400652626563,15.07840286088181,0 120.6396302970032,15.07890740897101,0 120.6395055202748,15.07907563644021,0 120.6394679705148,15.07911388161261,0 
+			</coordinates>
+		</LineString>
+	</Placemark>
+</Document>
+</kml>

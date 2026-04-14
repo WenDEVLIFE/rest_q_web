@@ -35,7 +35,10 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body 
+        className="min-h-full flex flex-col"
+        suppressHydrationWarning
+      >
         <AuthProvider>
           {children}
           <Toaster position="top-center" richColors />

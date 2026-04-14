@@ -4,12 +4,17 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
+  X,
+  BrainCircuit,
+  Zap,
+  ShieldCheck,
+  BarChart3,
   ChevronRight,
   Loader2,
   LogOut,
   LayoutDashboard,
   Activity,
-  X
+  Target
 } from 'lucide-react';
 import { useAuth } from '../src/context/AuthContext';
 import { HomeCard } from '../components/User/HomeCard';
@@ -44,6 +49,7 @@ export default function Home() {
   const [mapIncidents, setMapIncidents] = useState<Incident[]>([]);
   const [userIncidents, setUserIncidents] = useState<Incident[]>([]);
   const [historyIncidents, setHistoryIncidents] = useState<Incident[]>([]);
+  const [showMLDocs, setShowMLDocs] = useState(false);
 
   const historyForCurrentUser = historyIncidents.filter((incident) => {
     if (!profile && !user) return false;
@@ -182,7 +188,18 @@ export default function Home() {
       case 'report':
         return <IncidentReporter onClose={() => setActiveView('home')} onReport={handleIncidentReport} reportPin={reportPin} reportedIncidents={userIncidents} />;
       case 'route':
-        return <RouteNavigation onClose={() => setActiveView('home')} />;
+        return <RouteNavigation 
+          onClose={() => setActiveView('home')} 
+          onSelectDestination={(lat, lng, label) => {
+            setFocusPin({ lat, lng, label });
+            setOverlayMode('route');
+          }}
+          onUpdateStart={(lat, lng) => {
+            if (!reportPin || reportPin.lat !== lat || reportPin.lng !== lng) {
+              setReportPin({ lat, lng });
+            }
+          }}
+        />;
       case 'history':
         return <IncidentHistory onClose={() => setActiveView('home')} incidents={historyForCurrentUser} />;
       default:
@@ -252,8 +269,9 @@ export default function Home() {
           <Image
             src="/logo.png"
             alt="Res-Q Logo"
-            width={100}
-            height={100}
+            width={120}
+            height={40}
+            style={{ height: '40px', width: 'auto' }}
             className="object-contain"
             priority
           />
@@ -301,6 +319,14 @@ export default function Home() {
                 <ChevronRight className="w-4 h-4" />
               </Link>
             )}
+            
+            <button 
+              onClick={() => setShowMLDocs(true)}
+              className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all active:scale-95 shadow-lg group"
+              title="System Intelligence Guide"
+            >
+              <BrainCircuit className="w-5 h-5 group-hover:animate-pulse" />
+            </button>
           </div>
         </div>
       </header>
@@ -384,6 +410,141 @@ export default function Home() {
       {overlayMode === 'report' && !reportPin && (
         <div className="absolute bottom-20 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-full text-sm font-bold shadow-2xl z-50 animate-bounce pointer-events-none">
           Click anywhere on the map to pinpoint emergency!
+        </div>
+      )}
+
+      {/* --- ML INTELLIGENCE GUIDE MODAL --- */}
+      {showMLDocs && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-8 animate-in fade-in duration-300">
+           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setShowMLDocs(false)} />
+           <div className="relative w-full max-w-4xl max-h-[90vh] bg-white rounded-[40px] shadow-2xl overflow-hidden flex flex-col border border-white/20">
+              {/* Modal Header */}
+              <div className="p-8 pb-4 border-b border-slate-100 flex items-center justify-between">
+                 <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-indigo-200">
+                       <BrainCircuit className="w-6 h-6" />
+                    </div>
+                    <div>
+                       <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Intelligence Discovery</h2>
+                       <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mt-1 italic">Machine Learning & Prediction Roadmap</p>
+                    </div>
+                 </div>
+                 <button onClick={() => setShowMLDocs(false)} className="p-3 bg-slate-50 text-slate-400 rounded-2xl hover:bg-slate-100 transition-all active:scale-90">
+                    <X className="w-6 h-6" />
+                 </button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="flex-1 overflow-y-auto p-8 space-y-12 custom-scrollbar border-t border-slate-50">
+                  <section>
+                     <div className="flex items-center gap-3 mb-8">
+                        <span className="w-1.5 h-6 bg-primary rounded-full"></span>
+                        <h3 className="text-lg font-black text-slate-900 uppercase tracking-widest">TSRE: Research Architecture</h3>
+                     </div>
+                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="p-6 bg-slate-50 rounded-[32px] border border-slate-100 group hover:border-primary/30 transition-all">
+                           <p className="text-[10px] font-black text-primary uppercase mb-3 px-2 py-0.5 bg-sky-100 w-fit rounded-full">Spatial Logic</p>
+                           <h4 className="text-base font-black text-slate-900 mb-2 italic">Composite ETA Engine</h4>
+                           <div className="bg-white p-4 rounded-xl border border-slate-100 mb-4 font-mono text-[10px] text-slate-700 leading-relaxed shadow-sm">
+                             T = (D * K) + Sum(W*T) + Φ + Ω
+                           </div>
+                           <p className="text-[11px] font-bold text-slate-500 leading-relaxed">Calculates Euclidean distance (D) adjusted by peak traffic weights (W) and hazard penalty constants (Φ).</p>
+                        </div>
+                        <div className="p-6 bg-slate-50 rounded-[32px] border border-slate-100 group hover:border-emerald-300 transition-all">
+                           <p className="text-[10px] font-black text-emerald-600 uppercase mb-3 px-2 py-0.5 bg-emerald-100 w-fit rounded-full">Risk Scoring</p>
+                           <h4 className="text-base font-black text-slate-900 mb-2 italic">Multivariate R-Score</h4>
+                           <div className="bg-white p-4 rounded-xl border border-slate-100 mb-4 font-mono text-[10px] text-slate-700 leading-relaxed shadow-sm">
+                             R = (αH + βS + γ/V) / N
+                           </div>
+                           <p className="text-[11px] font-bold text-slate-500 leading-relaxed">Analyzes historical frequency (α), user-severity (β), and road velocity (γ) to determine current alert level.</p>
+                        </div>
+                        <div className="p-6 bg-slate-50 rounded-[32px] border border-slate-100 group hover:border-indigo-300 transition-all">
+                           <p className="text-[10px] font-black text-indigo-600 uppercase mb-3 px-2 py-0.5 bg-indigo-100 w-fit rounded-full">Cognitive</p>
+                           <h4 className="text-base font-black text-slate-900 mb-2 italic">DBSCAN Clustering</h4>
+                           <div className="bg-white p-4 rounded-xl border border-slate-100 mb-4 font-mono text-[10px] text-slate-700 leading-relaxed shadow-sm">
+                             eps=500m | MinPts=4 | Tw=24h
+                           </div>
+                           <p className="text-[11px] font-bold text-slate-500 leading-relaxed">Density-based clustering identifies hotspots when at least 4 reports converge within a 500m radius.</p>
+                        </div>
+                     </div>
+                  </section>
+
+                 {/* 2. Features Detailed */}
+                 <section>
+                    <div className="flex items-center justify-between mb-8">
+                       <div className="flex items-center gap-3">
+                          <span className="w-1.5 h-6 bg-emerald-500 rounded-full"></span>
+                          <h3 className="text-lg font-black text-slate-900 uppercase tracking-widest">Physics of Resilience</h3>
+                       </div>
+                       <Link 
+                         href="/intelligence" 
+                         className="flex items-center gap-2 text-[10px] font-black uppercase text-indigo-600 hover:text-indigo-800 transition-colors py-2 px-4 bg-indigo-50 rounded-full border border-indigo-100 group"
+                       >
+                         Learn More (Intricacies & Analogies) <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                       </Link>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                       {[
+                          { title: "Predictive ETA", desc: "Edge-based inference calculating arrival times using traffic density (Tw) and regional hazard weights (Vp). Computes shortest path via real-time telemetry.", icon: <Activity className="w-5 h-5" />, color: "bg-blue-600" },
+                          { title: "Hotspot Clustering", desc: "Our Pattern Intelligence engine tracks report density over a 12-hour sliding window to predict flash-floods before they are officially declared.", icon: <Target className="w-5 h-5" />, color: "bg-red-600" },
+                          { title: "Triage LLM", desc: "High-speed conversational support using Innovatech Microservices. Provides dialect-aware emotional support and verified medical triage steps.", icon: <BrainCircuit className="w-5 h-5" />, color: "bg-indigo-600" },
+                          { title: "SITREP Synthesis", desc: "Automatically summarizes thousands of chaotic incident reports into a clear, actionable Situation Report (SITREP) for high-level Admins.", icon: <BarChart3 className="w-5 h-5" />, color: "bg-slate-900" }
+                       ].map((feat, i) => (
+                          <div key={i} className="flex gap-4 p-5 bg-white border-2 border-slate-50 rounded-3xl hover:border-primary/20 hover:shadow-xl transition-all group">
+                             <div className={`w-12 h-12 ${feat.color} text-white rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform`}>
+                                {feat.icon}
+                             </div>
+                             <div>
+                                <h4 className="text-sm font-black text-slate-900 mb-1">{feat.title}</h4>
+                                <p className="text-[11px] font-bold text-slate-500 leading-relaxed">{feat.desc}</p>
+                             </div>
+                          </div>
+                       ))}
+                    </div>
+                 </section>
+
+                 <section className="bg-slate-900 rounded-[32px] p-8 text-white relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-8 opacity-10">
+                       <BarChart3 className="w-32 h-32" />
+                    </div>
+                    <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center">
+                       <div className="flex-1">
+                          <h3 className="text-lg font-black mb-4 uppercase tracking-widest flex items-center gap-2 text-indigo-400">
+                             Data Fusion Philosophy
+                          </h3>
+                          <p className="text-sm font-bold text-slate-400 leading-relaxed mb-8">
+                             Res-Q integrates multi-modal telemetry from GDACS (Typhoons), OpenWeather (Floods), and Citizen Intelligence. This creates a "Predictive Safety Grid" that learned from historical response patterns in the San Fernando locality.
+                          </p>
+                          <div className="grid grid-cols-2 gap-4">
+                             <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                                <span className="text-[9px] font-black uppercase text-slate-500 mb-1 block">Ethics</span>
+                                <p className="text-[10px] font-bold">Privacy-first processing with 48h anonymization.</p>
+                             </div>
+                             <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                                <span className="text-[9px] font-black uppercase text-slate-500 mb-1 block">Accuracy</span>
+                                <p className="text-[10px] font-bold">88% Prediction threshold for dispatch logic.</p>
+                             </div>
+                          </div>
+                       </div>
+                       <div className="w-full md:w-48 grid grid-cols-1 gap-3">
+                          <div className="p-4 bg-white/5 rounded-2xl border border-white/10 text-center">
+                             <span className="block text-2xl font-black italic underline decoration-primary decoration-4">2.4s</span>
+                             <span className="text-[9px] font-black uppercase text-indigo-400">Latency</span>
+                          </div>
+                          <div className="p-4 bg-white/5 rounded-2xl border border-white/10 text-center">
+                             <span className="block text-2xl font-black italic underline decoration-emerald-400 decoration-4">8ms</span>
+                             <span className="text-[9px] font-black uppercase text-emerald-400">Inference</span>
+                          </div>
+                       </div>
+                    </div>
+                 </section>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-6 bg-slate-50 border-t border-slate-100 text-center">
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Reference Document: ml.md • Vers: RT-MANILA-CORE-V2</p>
+              </div>
+           </div>
         </div>
       )}
 

@@ -5,8 +5,10 @@ import {
   Search,
   MapPin,
   Loader2,
-  X
+  X,
+  Target
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { getAddressSuggestions, GeocodingResult } from '../../src/service/Map_Service';
 
 interface SidebarSearchProps {
@@ -77,6 +79,34 @@ export const SidebarSearch = ({ onLocationSelect, onReset, initialValue }: Sideb
             <X className="w-4 h-4" />
           </button>
         )}
+        <button 
+          onClick={() => {
+            if ("geolocation" in navigator) {
+              toast.promise(
+                new Promise((resolve, reject) => {
+                  navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                      if (onLocationSelect) {
+                        onLocationSelect(pos.coords.latitude, pos.coords.longitude, "Your Current Location");
+                      }
+                      resolve(pos);
+                    },
+                    (err) => reject(err)
+                  );
+                }),
+                {
+                  loading: 'Acquiring location...',
+                  success: 'Location pinpointed!',
+                  error: 'Permission denied or timed out.',
+                }
+              );
+            }
+          }}
+          className="p-2.5 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 hover:text-primary transition-all active:scale-95"
+          title="Locate Me"
+        >
+          <Target className="w-4 h-4" />
+        </button>
         <button className="p-2.5 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
           {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
         </button>
