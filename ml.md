@@ -4,6 +4,12 @@ This document provides the mathematical foundation and algorithmic architecture 
 
 ---
 
+> [!IMPORTANT]
+> **Architectural Constraint: Spatial Processing Priority**
+> The system is architected to prioritize **Routing & Physical Spatial Constraints** before injecting AI heuristics. Path traversal ($D_{km}$) and physical road blocks (KML/XLSX) must be finalized before the TSRE Engine applies AI-driven risk weights ($R_{score}$). We calculate the "World" before we calculate the "Brain."
+
+---
+
 ## 🏛 1. Mathematical Foundation: The TSRE Engine
 
 The **Temporal-Spatial Risk Engine (TSRE)** calculates a dynamic response matrix for every incident.

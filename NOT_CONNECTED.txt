@@ -10,6 +10,10 @@ If a feature is not listed as [CONNECTED], assume it is a simulation for UI test
 SECTION 1: ROUTING & PREDICTIONS (YOUR QUESTION)
 ================================================================================
 
+PRIORITY RULE: ROUTING BEFORE AI
+The system MUST calculate physical routing (road paths) before applying 
+AI-based risk scores. We map the physical world first, then the smart layer.
+
 Q: Is the "Live Prediction" and "Optimal Route" accurate?
 A: [PARTIAL / HEURISTIC]
 
