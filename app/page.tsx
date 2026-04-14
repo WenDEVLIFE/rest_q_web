@@ -188,18 +188,19 @@ export default function Home() {
       case 'report':
         return <IncidentReporter onClose={() => setActiveView('home')} onReport={handleIncidentReport} reportPin={reportPin} reportedIncidents={userIncidents} />;
       case 'route':
-        return <RouteNavigation 
-          onClose={() => setActiveView('home')} 
-          onSelectDestination={(lat, lng, label) => {
-            setFocusPin({ lat, lng, label });
-            setOverlayMode('route');
-          }}
-          onUpdateStart={(lat, lng) => {
-            if (!reportPin || reportPin.lat !== lat || reportPin.lng !== lng) {
-              setReportPin({ lat, lng });
-            }
-          }}
-        />;
+            return <RouteNavigation 
+              onClose={() => setActiveView('home')} 
+              onSelectDestination={(lat, lng, label) => {
+                setFocusPin({ lat, lng, label });
+                setOverlayMode('route');
+              }}
+              onUpdateStart={(lat, lng) => {
+                if (!reportPin || reportPin.lat !== lat || reportPin.lng !== lng) {
+                  setReportPin({ lat, lng });
+                }
+              }}
+              reportPin={reportPin}
+            />;
       case 'history':
         return <IncidentHistory onClose={() => setActiveView('home')} incidents={historyForCurrentUser} />;
       default:
@@ -215,7 +216,10 @@ export default function Home() {
                 onActionSelect={handleActionSelect}
                 isSidebar={isMapActive}
                 hasLocation={Boolean(focusPin)}
-                onLocationSelect={(lat, lng, label) => setFocusPin({ lat, lng, label })}
+                onLocationSelect={(lat, lng, label) => {
+                  setFocusPin({ lat, lng, label });
+                  setReportPin({ lat, lng }); // Synchronize user starting position with their searched address
+                }}
                 onEmergencyMap={handleEmergencyMapClick}
                 focusPinLabel={focusPin?.label}
               />
@@ -247,6 +251,9 @@ export default function Home() {
             reportedIncidents={mapIncidents}
             onMapClick={(lat, lng) => setReportPin({ lat, lng })}
             onOverlayModeChange={(mode) => setOverlayMode(mode)}
+            onLocationSelect={(lat, lng, label) => {
+              setFocusPin({ lat, lng, label });
+            }}
             onReset={() => {
               setFocusPin(null);
               setOverlayMode('none');

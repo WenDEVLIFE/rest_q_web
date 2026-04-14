@@ -22,10 +22,13 @@ interface RouteNavigationProps {
   onClose: () => void;
   onSelectDestination?: (lat: number, lng: number, label: string) => void;
   onUpdateStart?: (lat: number, lng: number) => void;
+  reportPin?: { lat: number, lng: number } | null;
 }
 
-export const RouteNavigation = ({ onClose, onSelectDestination, onUpdateStart }: RouteNavigationProps) => {
-  const [start, setStart] = useState('15.0286, 120.6898');
+export const RouteNavigation = ({ onClose, onSelectDestination, onUpdateStart, reportPin }: RouteNavigationProps) => {
+  const [start, setStart] = useState(
+    reportPin ? `${reportPin.lat.toFixed(4)}, ${reportPin.lng.toFixed(4)}` : '15.0286, 120.6898'
+  );
   const [isSearching, setIsSearching] = useState(false);
   const [facilities, setFacilities] = useState<any[] | null>(null);
   const [selectedFacility, setSelectedFacility] = useState<any | null>(null);
@@ -38,6 +41,13 @@ export const RouteNavigation = ({ onClose, onSelectDestination, onUpdateStart }:
        if (onUpdateStart) onUpdateStart(coords[0], coords[1]);
     }
   }, [start, onUpdateStart]);
+
+  // Sync if reportPin changes externally (e.g. Map click)
+  React.useEffect(() => {
+    if (reportPin) {
+      setStart(`${reportPin.lat.toFixed(4)}, ${reportPin.lng.toFixed(4)}`);
+    }
+  }, [reportPin]);
 
   const handleSearchFacilities = () => {
     // Parse coordinates if possible

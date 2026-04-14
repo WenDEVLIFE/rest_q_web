@@ -8,8 +8,10 @@ import { Incident } from '../../src/types/incident';
 import { toast } from 'sonner';
 import { AdminHandler } from '../../src/agents/AdminDashboardAgent/AdminHandler';
 import { ProneArea } from '../../src/types/prone_area';
-import { AlertTriangle, Flame, Droplets, Car } from 'lucide-react';
+import { AlertTriangle, Flame, Droplets, Car, Loader2 } from 'lucide-react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { SidebarSearch } from '../User/SidebarSearch';
+import { RiskLevelPanel } from '../User/RiskLevelPanel';
 
 
 interface InteractiveMapProps {
@@ -26,8 +28,6 @@ interface InteractiveMapProps {
   forceOpen?: boolean;
   onReset?: () => void;
   onLocationSelect?: (lat: number, lng: number, label: string) => void;
-  selectedFacility?: { lat: number, lng: number } | null;
-  incidentPin?: { lat: number, lng: number } | null;
 }
 
 type FloodTileLevel = 'low' | 'medium' | 'high';
@@ -308,7 +308,7 @@ const MapEvents = ({ onMapClick }: { onMapClick?: (lat: number, lng: number) => 
   return null;
 };
 
-const MapController = ({ focusPin, stormFocus }: { 
+const MapController = ({ focusPin, stormFocus }: {
   focusPin?: { lat: number, lng: number } | null,
   stormFocus?: [number, number] | null
 }) => {
@@ -323,9 +323,7 @@ const MapController = ({ focusPin, stormFocus }: {
   return null;
 };
 
-import { SidebarSearch } from '../User/SidebarSearch';
-import { RiskLevelPanel } from '../User/RiskLevelPanel';
-import { Loader2 } from 'lucide-react';
+
 
 export default function InteractiveMap({
   overlayMode,
@@ -338,15 +336,12 @@ export default function InteractiveMap({
   forceTab,
   forceOpen,
   onReset,
-  onLocationSelect,
-  selectedFacility,
-  incidentPin
-}: InteractiveMapProps) {
+  onLocationSelect }: InteractiveMapProps) {
   const [isMounted, setIsMounted] = React.useState(false);
-  const [liveTyphoon, setLiveTyphoon] = React.useState<{ 
-    lat: number, 
-    lng: number, 
-    name: string, 
+  const [liveTyphoon, setLiveTyphoon] = React.useState<{
+    lat: number,
+    lng: number,
+    name: string,
     speed: number,
     forecastPath?: [number, number][]
   } | null>(null);
@@ -391,30 +386,50 @@ export default function InteractiveMap({
   }, [isMounted, fetchLiveProneAreas, fetchLiveTraffic]);
 
   const [routePoints, setRoutePoints] = React.useState<[number, number][]>([]);
+  const [routeIsLoading, setRouteIsLoading] = React.useState(false);
 
-  // Realistic Route Generator (Grid-based Manhattan Path)
-  const generateRealisticRoute = React.useCallback((start: [number, number], end: [number, number]) => {
-     // Create a 4-point grid path to look like street driving
-     const midLat = start[0];
-     const midLng = end[1];
-     
-     // Add slight jitter for realism
-     const points: [number, number][] = [
-       start,
-       [midLat, midLng], // Turn 1
-       end
-     ];
-     setRoutePoints(points);
+  // Realistic Route Generator (OSRM Road Pathfinding)
+  const generateRealisticRoute = React.useCallback(async (start: [number, number], end: [number, number]) => {
+    setRouteIsLoading(true);
+    try {
+      // OSRM expects coordinates in [lng, lat] order
+      const url = `https://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+        // Map [lng, lat] back to Leaflet [lat, lng]
+        const coords = data.routes[0].geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]]) as [number, number][];
+        setRoutePoints(coords);
+      } else {
+        throw new Error("Route discovery failed at the API level.");
+      }
+    } catch (error) {
+      console.error("Routing engine unavailable, falling back to straight-line path:", error);
+      // Fallback: Maintains the "L-shaped" grid path as a safe default
+      const midLat = start[0];
+      const midLng = end[1];
+      setRoutePoints([start, [midLat, midLng], end]);
+    } finally {
+      setRouteIsLoading(false);
+    }
   }, []);
 
   React.useEffect(() => {
-    if (overlayMode === 'route' && selectedFacility && incidentPin) {
-       generateRealisticRoute(
-         [selectedFacility.lat, selectedFacility.lng],
-         [incidentPin.lat, incidentPin.lng]
-       );
+    if (overlayMode === 'route' && focusPin) {
+      // Start is either the manually set report pin OR the city center by default
+      const startingPoint = reportPin || { lat: 15.0286, lng: 120.6898 };
+
+      const fetchPath = async () => {
+        await generateRealisticRoute(
+          [startingPoint.lat, startingPoint.lng],
+          [focusPin.lat, focusPin.lng]
+        );
+      };
+
+      fetchPath();
     }
-  }, [overlayMode, selectedFacility, incidentPin, generateRealisticRoute]);
+  }, [overlayMode, focusPin, reportPin, generateRealisticRoute]);
 
   // Center specifically to San Fernando, Pampanga as requested
   const center: [number, number] = [15.0286, 120.6898];
@@ -428,7 +443,7 @@ export default function InteractiveMap({
 
   const isWithinSanFernando = (lat: number, lng: number) => {
     return lat >= SAN_FERNANDO_BOUNDS.minLat && lat <= SAN_FERNANDO_BOUNDS.maxLat &&
-           lng >= SAN_FERNANDO_BOUNDS.minLng && lng <= SAN_FERNANDO_BOUNDS.maxLng;
+      lng >= SAN_FERNANDO_BOUNDS.minLng && lng <= SAN_FERNANDO_BOUNDS.maxLng;
   };
 
   if (!isMounted) {
@@ -456,6 +471,10 @@ export default function InteractiveMap({
       });
     }
     setLocalSearchPin({ lat, lng, label });
+    // Propagate to parent state to synchronize globally
+    if (onLocationSelect) {
+      onLocationSelect(lat, lng, label);
+    }
   };
 
   const handleReset = () => {
@@ -464,7 +483,7 @@ export default function InteractiveMap({
 
   const forecastPath = liveTyphoon?.forecastPath || [];
   // Ensure the eye is ALWAYS the start of the path to prevent "stray lines"
-  const typhoonCenter: [number, number] = forecastPath.length > 0 
+  const typhoonCenter: [number, number] = forecastPath.length > 0
     ? [...forecastPath[0]] as [number, number]
     : (liveTyphoon ? [liveTyphoon.lat, liveTyphoon.lng] : [14.9500, 120.8000]);
   const typhoonRadius = liveTyphoon ? (liveTyphoon.speed * 1000) : 15000;
@@ -489,8 +508,8 @@ export default function InteractiveMap({
         />
 
         <MapEvents onMapClick={overlayMode === 'report' ? onMapClick : undefined} />
-        <MapController 
-          focusPin={focusPin || activeSearchPin} 
+        <MapController
+          focusPin={focusPin || activeSearchPin}
           stormFocus={stormFocusTrigger}
         />
 
@@ -502,35 +521,35 @@ export default function InteractiveMap({
             icon={getIconForType(est["Establishment Type"])}
           >
             <Popup className="font-inter">
-                <div className="flex flex-col items-center">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{est["Establishment Type"]}</p>
-                  <p className="text-sm font-black text-slate-900 leading-tight mb-2 text-center">{est.Name}</p>
-                  
-                  {est.Phone && (
-                    <a 
-                      href={`tel:${est.Phone.split('/')[0].replace(/[^\d+]/g, '')}`}
-                      className="text-[11px] font-bold text-blue-600 mb-4 hover:underline flex items-center gap-1"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                      {est.Phone}
-                    </a>
-                  )}
+              <div className="flex flex-col items-center">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{est["Establishment Type"]}</p>
+                <p className="text-sm font-black text-slate-900 leading-tight mb-2 text-center">{est.Name}</p>
 
-                  <button 
-                    onClick={() => {
-                      if (onLocationSelect) {
-                        onLocationSelect(est.Latitude, est.Longitude, est.Name);
-                      }
-                      if (onOverlayModeChange) {
-                        onOverlayModeChange('route');
-                      }
-                    }}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95"
+                {est.Phone && (
+                  <a
+                    href={`tel:${est.Phone.split('/')[0].replace(/[^\d+]/g, '')}`}
+                    className="text-[11px] font-bold text-blue-600 mb-4 hover:underline flex items-center gap-1"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                    Get Directions
-                  </button>
-                </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+                    {est.Phone}
+                  </a>
+                )}
+
+                <button
+                  onClick={() => {
+                    if (onLocationSelect) {
+                      onLocationSelect(est.Latitude, est.Longitude, est.Name);
+                    }
+                    if (onOverlayModeChange) {
+                      onOverlayModeChange('route');
+                    }
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
+                  Get Directions
+                </button>
+              </div>
             </Popup>
           </Marker>
         ))}
@@ -576,7 +595,7 @@ export default function InteractiveMap({
               pathOptions={{ fillColor: '#ef4444', fillOpacity: 0.35, color: '#dc2626', weight: 4, dashArray: '12, 12' }}
             />
             <Marker position={typhoonCenter} icon={TyphoonEyeIcon} />
-            
+
             {/* Forecast Track Line */}
             {forecastPath.length > 0 && (
               <>
@@ -584,20 +603,20 @@ export default function InteractiveMap({
                 {(() => {
                   const leftPoints: [number, number][] = [];
                   const rightPoints: [number, number][] = [];
-                  
+
                   forecastPath.forEach((p, i) => {
                     // Widening cone that follows the path
-                    const spread = 0.05 + (i * 0.12); 
+                    const spread = 0.05 + (i * 0.12);
                     // To create a real cone, we offset along the longitude (simplified)
                     // but we ensure it connects smoothly
                     leftPoints.push([p[0] + (spread * 0.2), p[1] - (spread * 0.8)]);
                     rightPoints.unshift([p[0] - (spread * 0.2), p[1] + (spread * 0.8)]);
                   });
-                  
+
                   const coneCoords = [...leftPoints, ...rightPoints];
-                  
+
                   return (
-                    <Polygon 
+                    <Polygon
                       positions={coneCoords}
                       pathOptions={{
                         fillColor: '#ffffff',
@@ -644,41 +663,55 @@ export default function InteractiveMap({
         )}
 
         {/* Route Overlay */}
+        {overlayMode === 'route' && routeIsLoading && (
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[2000] bg-white/90 backdrop-blur-xl px-6 py-4 rounded-3xl shadow-2xl border border-primary/20 flex items-center gap-4 animate-in fade-in zoom-in duration-300">
+            <Loader2 className="w-6 h-6 text-primary animate-spin" />
+            <div className="flex flex-col">
+              <p className="text-xs font-black text-slate-900 uppercase tracking-widest">Routing Analysis</p>
+              <p className="text-[10px] font-bold text-primary italic uppercase tracking-tighter">Calculating optimal road path...</p>
+            </div>
+          </div>
+        )}
+
         {overlayMode === 'route' && (
           <>
             <Polyline
               positions={routePoints}
               pathOptions={{ color: '#059669', weight: 6, opacity: 0.8 }}
             />
-            {incidentPin && (
+            {focusPin && (
               <>
-                <Circle 
-                  center={[incidentPin.lat, incidentPin.lng]} 
-                  radius={500} 
-                  pathOptions={{ fillColor: '#ef4444', fillOpacity: 0.1, color: '#ef4444', weight: 1, dashArray: '5, 5' }} 
+                <Circle
+                  center={[focusPin.lat, focusPin.lng]}
+                  radius={500}
+                  pathOptions={{ fillColor: '#ef4444', fillOpacity: 0.1, color: '#ef4444', weight: 1, dashArray: '5, 5' }}
                 />
-                <Marker position={[incidentPin.lat, incidentPin.lng]} icon={ReportPinIcon}>
+                <Marker position={[focusPin.lat, focusPin.lng]} icon={ReportPinIcon}>
                   <Popup className="font-inter">
                     <div className="text-center">
-                        <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-1">Incident Start</p>
-                        <p className="text-xs font-bold text-slate-700">Your Current Location</p>
+                      <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-1">Route Destination</p>
+                      <p className="text-xs font-bold text-slate-700">{focusPin.label || 'Selected Location'}</p>
                     </div>
                   </Popup>
                 </Marker>
               </>
             )}
-            {selectedFacility && (
-              <Marker position={[selectedFacility.lat, selectedFacility.lng]} icon={getIconForType("Healthcare Facility")}>
-                <Popup className="font-inter">
-                   <div className="text-center">
-                      <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">Route Destination</p>
-                      <p className="text-xs font-bold text-slate-700">Medical Facility</p>
-                   </div>
-                </Popup>
-              </Marker>
-            )}
-            {/* Auto-focus on the route */}
-            <MapController focusPin={selectedFacility} />
+            {/* Start Marker */}
+            {(() => {
+              const startPos = reportPin || { lat: 15.0286, lng: 120.6898 };
+              return (
+                <Marker position={[startPos.lat, startPos.lng]} icon={getIconForType("Healthcare Facility")}>
+                  <Popup className="font-inter">
+                    <div className="text-center">
+                      <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">Route Start</p>
+                      <p className="text-xs font-bold text-slate-700">{reportPin ? 'Your Location' : 'City Center'}</p>
+                    </div>
+                  </Popup>
+                </Marker>
+              );
+            })()}
+            {/* Auto-focus on the destination */}
+            <MapController focusPin={focusPin} />
           </>
         )}
 
@@ -689,8 +722,8 @@ export default function InteractiveMap({
               center={[area.lat, area.lng]}
               radius={area.radius}
               pathOptions={{
-                fillColor: area.status === 'Unfixed' ? 
-                  (area.category === 'Fire' ? '#ef4444' : area.category === 'Flood' ? '#2563eb' : '#f59e0b') 
+                fillColor: area.status === 'Unfixed' ?
+                  (area.category === 'Fire' ? '#ef4444' : area.category === 'Flood' ? '#2563eb' : '#f59e0b')
                   : '#059669',
                 fillOpacity: 0.25,
                 color: area.status === 'Unfixed' ? '#dc2626' : '#059669',
@@ -705,9 +738,8 @@ export default function InteractiveMap({
                       <span className={`w-2 h-2 rounded-full ${area.status === 'Unfixed' ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`}></span>
                       <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{area.category} Zone</span>
                     </div>
-                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
-                      area.status === 'Unfixed' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
-                    }`}>
+                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${area.status === 'Unfixed' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                      }`}>
                       {area.status}
                     </span>
                   </div>
@@ -725,19 +757,18 @@ export default function InteractiveMap({
               </Popup>
             </Circle>
             {/* Category Icon at Center */}
-            <Marker 
+            <Marker
               position={[area.lat, area.lng]}
               icon={L.divIcon({
                 className: 'custom-category-icon',
                 html: renderToStaticMarkup(
-                  <div className={`p-1.5 rounded-full bg-white shadow-lg border-2 ${
-                    area.category === 'Fire' ? 'border-red-500 text-red-500' : 
-                    area.category === 'Flood' ? 'border-blue-500 text-blue-500' : 
-                    area.category === 'Accident' ? 'border-amber-500 text-amber-500' : 'border-slate-500 text-slate-500'
-                  }`}>
-                    {area.category === 'Fire' ? <Flame size={12} strokeWidth={3} /> : 
-                     area.category === 'Flood' ? <Droplets size={12} strokeWidth={3} /> : 
-                     area.category === 'Accident' ? <Car size={12} strokeWidth={3} /> : <AlertTriangle size={12} strokeWidth={3} />}
+                  <div className={`p-1.5 rounded-full bg-white shadow-lg border-2 ${area.category === 'Fire' ? 'border-red-500 text-red-500' :
+                    area.category === 'Flood' ? 'border-blue-500 text-blue-500' :
+                      area.category === 'Accident' ? 'border-amber-500 text-amber-500' : 'border-slate-500 text-slate-500'
+                    }`}>
+                    {area.category === 'Fire' ? <Flame size={12} strokeWidth={3} /> :
+                      area.category === 'Flood' ? <Droplets size={12} strokeWidth={3} /> :
+                        area.category === 'Accident' ? <Car size={12} strokeWidth={3} /> : <AlertTriangle size={12} strokeWidth={3} />}
                   </div>
                 ),
                 iconSize: [24, 24],
@@ -773,10 +804,9 @@ export default function InteractiveMap({
                   <div className="font-inter">
                     <p className="text-[10px] font-black uppercase text-slate-400">Road Telemetry</p>
                     <p className="text-xs font-bold text-slate-900">{road.name}</p>
-                    <p className={`text-[11px] font-black uppercase mt-1 ${
-                      road.status === 'heavy' ? 'text-red-600' : 
+                    <p className={`text-[11px] font-black uppercase mt-1 ${road.status === 'heavy' ? 'text-red-600' :
                       road.status === 'moderate' ? 'text-amber-600' : 'text-emerald-600'
-                    }`}>
+                      }`}>
                       Status: {road.status || 'fluid'}
                     </p>
                   </div>
