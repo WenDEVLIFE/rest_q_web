@@ -3,8 +3,8 @@
 import React, { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, Polygon, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import establishmentsData from '../../public/establishment.json';
 import { Incident } from '../../src/types/incident';
+import { useFacilities } from '../../src/hooks/useFacilities';
 import { toast } from 'sonner';
 import { AdminHandler } from '../../src/agents/AdminDashboardAgent/AdminHandler';
 import { ProneArea } from '../../src/types/prone_area';
@@ -338,6 +338,7 @@ export default function InteractiveMap({
   onReset,
   onLocationSelect }: InteractiveMapProps) {
   const [isMounted, setIsMounted] = React.useState(false);
+  const { facilities } = useFacilities();
   const [liveTyphoon, setLiveTyphoon] = React.useState<{
     lat: number,
     lng: number,
@@ -514,7 +515,7 @@ export default function InteractiveMap({
         />
 
         {/* --- Markers for Establishments --- */}
-        {establishmentsData.map((est, idx) => (
+        {facilities.map((est, idx) => (
           <Marker
             key={idx}
             position={[est.Latitude, est.Longitude]}

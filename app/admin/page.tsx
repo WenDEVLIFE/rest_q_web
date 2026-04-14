@@ -6,6 +6,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { AdminSidebar } from '../../components/Admin/AdminSidebar';
 import { MonitoringView } from '../../components/Admin/MonitoringView';
 import { AnalyticsView } from '../../components/Admin/AnalyticsView';
+import { FacilitiesView } from '../../components/Admin/FacilitiesView';
 import { UsersView } from '../../components/Admin/UsersView';
 import { ProneAreasView } from '../../components/Admin/ProneAreasView';
 import { SettingsView } from '../../components/Admin/SettingsView';
@@ -24,7 +25,7 @@ export default function AdminDashboardPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { profile, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'monitoring' | 'analytics' | 'users' | 'prone-areas' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'monitoring' | 'analytics' | 'facilities' | 'users' | 'prone-areas' | 'settings'>('overview');
   const [pendingCount, setPendingCount] = useState(0);
 
   // Protect route
@@ -37,7 +38,7 @@ export default function AdminDashboardPage() {
   // Sync active tab with URL for better navigation experience
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab === 'monitoring' || tab === 'analytics' || tab === 'users' || tab === 'prone-areas' || tab === 'settings') {
+    if (tab === 'monitoring' || tab === 'analytics' || tab === 'facilities' || tab === 'users' || tab === 'prone-areas' || tab === 'settings') {
       setActiveTab(tab as any);
     } else {
       setActiveTab('monitoring'); // Default to monitoring for now as requested
@@ -74,6 +75,8 @@ export default function AdminDashboardPage() {
         return <MonitoringView />;
       case 'analytics':
         return <AnalyticsView />;
+      case 'facilities':
+        return <FacilitiesView />;
       case 'users':
         return <UsersView />;
       case 'prone-areas':

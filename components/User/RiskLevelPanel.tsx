@@ -34,8 +34,8 @@ import { toast } from 'sonner';
 import Image from 'next/image';
 
 import { SidebarSearch } from './SidebarSearch';
-import establishmentsData from '../../public/establishment.json';
 import { Incident } from '../../src/types/incident';
+import { useFacilities } from '../../src/hooks/useFacilities';
 
 interface RiskLevelPanelProps {
   onLocationSelect?: (lat: number, lng: number, label: string) => void;
@@ -90,6 +90,7 @@ export const RiskLevelPanel = ({
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [weatherData, setWeatherData] = useState<any>(null);
+  const { facilities } = useFacilities();
 
   // Fetch Live Weather when a location is selected
   useEffect(() => {
@@ -172,7 +173,7 @@ export const RiskLevelPanel = ({
     : 0;
 
   const nearestEmergencyDistanceKm = selectedLocation
-    ? establishmentsData
+    ? facilities
       .filter((est) => est["Establishment Type"] === 'Emergency Service')
       .map((est) =>
         calculateDistance(
@@ -530,7 +531,7 @@ export const RiskLevelPanel = ({
 
   let nearbyFacilities: any[] = [];
   if (selectedLocation && activeTab === 'facilities') {
-    nearbyFacilities = establishmentsData.map(est => {
+    nearbyFacilities = facilities.map(est => {
       const dist = calculateDistance(
         selectedLocation.lat,
         selectedLocation.lng,

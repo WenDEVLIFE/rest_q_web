@@ -11,7 +11,7 @@ import {
   Phone
 } from 'lucide-react';
 import { SidebarSearch } from './SidebarSearch';
-import establishmentsData from '../../public/establishment.json';
+import { useFacilities } from '../../src/hooks/useFacilities';
 
 interface FacilitySidebarProps {
   onClose: () => void;
@@ -33,10 +33,12 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 };
 
 export const FacilitySidebar = ({ onClose, selectedLocation, onLocationSelect }: FacilitySidebarProps) => {
+  const { facilities } = useFacilities();
+
   const nearbyFacilities = useMemo(() => {
     if (!selectedLocation) return [];
 
-    return (establishmentsData as any[])
+    return facilities
       .map((est) => ({
         ...est,
         distance: calculateDistance(
@@ -47,7 +49,7 @@ export const FacilitySidebar = ({ onClose, selectedLocation, onLocationSelect }:
         ),
       }))
       .sort((a, b) => a.distance - b.distance);
-  }, [selectedLocation]);
+  }, [facilities, selectedLocation]);
 
   return (
     <div className="flex flex-col h-full bg-white rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden animate-in slide-in-from-left-8 duration-500">

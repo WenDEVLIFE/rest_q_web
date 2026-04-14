@@ -9,6 +9,7 @@ export const APP_ROUTES = {
     DASHBOARD: '/admin',
     MONITORING: '/admin?tab=monitoring',
     ANALYTICS: '/admin?tab=analytics',
+    FACILITIES: '/admin?tab=facilities',
     USERS: '/admin?tab=users',
   },
 } as const;

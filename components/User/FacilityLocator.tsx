@@ -13,7 +13,7 @@ import {
   Activity
 } from 'lucide-react';
 import { Button } from '../UI/Button';
-import establishmentsData from '../../public/establishment.json';
+import { useFacilities } from '../../src/hooks/useFacilities';
 
 interface FacilityLocatorProps {
   onClose: () => void;
@@ -22,9 +22,10 @@ interface FacilityLocatorProps {
 
 export const FacilityLocator = ({ onClose, onLocationSelect }: FacilityLocatorProps) => {
   const [searchTerm, setSearchQuery] = useState('');
+  const { facilities: facilityRecords } = useFacilities();
   
   // Transform JSON data into UI-friendly structure
-  const facilities = establishmentsData.map((est, index) => {
+  const facilities = facilityRecords.map((est, index) => {
     let color = 'bg-primary';
     let status = 'Available';
     let icon = <Shield className="w-6 h-6" />;
