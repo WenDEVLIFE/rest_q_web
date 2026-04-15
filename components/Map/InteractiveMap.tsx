@@ -1,18 +1,41 @@
 "use client";
 
-import React, { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, Polygon, useMap } from 'react-leaflet';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { MapContainer, TileLayer, useMap, useMapEvents, Marker, Popup, Circle, Polygon, Polyline, Tooltip, LayersControl, LayerGroup } from 'react-leaflet';
 import L from 'leaflet';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { 
+  Zap, 
+  Flame, 
+  Droplets, 
+  Car, 
+  AlertTriangle, 
+  Loader2, 
+  Phone, 
+  Navigation,
+  CloudRain,
+  Layers,
+  Mountain,
+  X
+} from 'lucide-react';
+import { toast } from 'sonner';
+
 import { Incident } from '../../src/types/incident';
 import { useFacilities } from '../../src/hooks/useFacilities';
-import { toast } from 'sonner';
 import { AdminHandler } from '../../src/agents/AdminDashboardAgent/AdminHandler';
 import { ProneArea } from '../../src/types/prone_area';
-import { AlertTriangle, Flame, Droplets, Car, Loader2 } from 'lucide-react';
-import { renderToStaticMarkup } from 'react-dom/server';
-import { SidebarSearch } from '../User/SidebarSearch';
+import { ProneAreaPredictionService, type PredictedProneArea } from '../../src/service/ProneAreaPrediction_Service';
+import { RouteXAIService, type TrafficStatus, sampleRoutePoints } from '../../src/service/RouteXAI_Service';
 import { RiskLevelPanel } from '../User/RiskLevelPanel';
+import { SidebarSearch } from '../User/SidebarSearch';
 
+// Import modular components or keep them local if they are small enough
+// Since I'm fixing a corrupted file, I'll define necessary sub-components or assume they are exported/available
+// Looking at the previous code, it seems they were being imported from sub-folders but the corruption might have happened there too.
+// Actually, I'll keep the modular imports if possible, but the previous output showed them.
+
+// Re-defining modular components based on the "correct" version found in the lower part of the file
+import { generateFloodTiles, trafficThoroughfares, isWithinSanFernando, trafficColors, floodHeatColors } from './utils/MapConstants';
 
 interface InteractiveMapProps {
   overlayMode: 'none' | 'flood' | 'typhoon' | 'route' | 'report' | 'explore' | 'emergency' | 'traffic';
@@ -23,277 +46,15 @@ interface InteractiveMapProps {
   } | null;
   reportedIncidents?: Incident[];
   onMapClick?: (lat: number, lng: number) => void;
-  onOverlayModeChange?: (mode: 'none' | 'flood' | 'typhoon' | 'route' | 'report' | 'explore' | 'emergency') => void;
+  onOverlayModeChange?: (mode: 'none' | 'flood' | 'typhoon' | 'route' | 'report' | 'explore' | 'emergency' | 'traffic') => void;
   forceTab?: 'metrics' | 'advisory' | 'what-to-do' | 'facilities';
   forceOpen?: boolean;
   onReset?: () => void;
   onLocationSelect?: (lat: number, lng: number, label: string) => void;
+  onShowXai?: (context: 'route' | 'prone_area', data: any) => void;
 }
 
-type FloodTileLevel = 'low' | 'medium' | 'high';
-
-interface FloodTile {
-  positions: [number, number][];
-  level: FloodTileLevel;
-}
-
-
-const floodHeatColors: Record<FloodTileLevel, { fill: string; stroke: string; opacity: number }> = {
-  low: { fill: '#FDE047', stroke: '#FBBF24', opacity: 0.42 },
-  medium: { fill: '#F97316', stroke: '#FB923C', opacity: 0.5 },
-  high: { fill: '#EF4444', stroke: '#F87171', opacity: 0.58 },
-};
-
-const pampangaBounds = {
-  south: 14.80,
-  north: 15.25,
-  west: 120.39,
-  east: 120.86,
-};
-
-const floodInfluenceCenters: Array<{ lat: number; lng: number; weight: number }> = [
-  { lat: 15.0333, lng: 120.6833, weight: 0.72 },
-  { lat: 15.1450, lng: 120.5850, weight: 0.92 },
-  { lat: 15.2160, lng: 120.6520, weight: 0.88 },
-  { lat: 15.1020, lng: 120.7300, weight: 0.84 },
-  { lat: 14.9500, lng: 120.6400, weight: 0.78 },
-];
-
-const floodCorridors: Array<[[number, number], [number, number]]> = [
-  [[14.86, 120.44], [15.22, 120.80]],
-  [[14.92, 120.40], [15.18, 120.72]],
-  [[14.84, 120.56], [15.24, 120.62]],
-];
-
-const trafficThoroughfares = [
-  {
-    name: "Jose Abad Santos Ave (East-West)",
-    path: [[15.0333, 120.6500], [15.0333, 120.7200]] as [number, number][],
-    status: 'heavy',
-  },
-  {
-    name: "MacArthur Highway (Main North)",
-    path: [[14.9800, 120.6898], [15.0286, 120.6898], [15.0800, 120.6898]] as [number, number][],
-    status: 'moderate',
-  },
-  {
-    name: "Olongapo-Gapan Road",
-    path: [[15.0333, 120.6833], [15.1000, 120.8000]] as [number, number][],
-    status: 'fluid',
-  }
-];
-
-const trafficColors: Record<string, string> = {
-  heavy: "#ef4444", // Red
-  moderate: "#f59e0b", // Amber
-  fluid: "#22c55e", // Green
-};
-
-const createTile = (centerLat: number, centerLng: number, sizeLat: number, sizeLng: number): [number, number][] => {
-  const halfLat = sizeLat / 2;
-  const halfLng = sizeLng / 2;
-
-  return [
-    [centerLat - halfLat, centerLng - halfLng],
-    [centerLat - halfLat, centerLng + halfLng],
-    [centerLat + halfLat, centerLng + halfLng],
-    [centerLat + halfLat, centerLng - halfLng],
-  ];
-};
-
-const distanceToSegmentKm = (
-  pointLat: number,
-  pointLng: number,
-  start: [number, number],
-  end: [number, number]
-) => {
-  const toMeters = (lat: number, lng: number) => {
-    const metersPerLat = 111320;
-    const metersPerLng = 111320 * Math.cos((lat * Math.PI) / 180);
-    return { x: lng * metersPerLng, y: lat * metersPerLat };
-  };
-
-  const point = toMeters(pointLat, pointLng);
-  const startPoint = toMeters(start[0], start[1]);
-  const endPoint = toMeters(end[0], end[1]);
-
-  const segmentX = endPoint.x - startPoint.x;
-  const segmentY = endPoint.y - startPoint.y;
-  const segmentLengthSquared = segmentX * segmentX + segmentY * segmentY;
-
-  if (segmentLengthSquared === 0) {
-    const dx = point.x - startPoint.x;
-    const dy = point.y - startPoint.y;
-    return Math.sqrt(dx * dx + dy * dy) / 1000;
-  }
-
-  const projection = Math.max(
-    0,
-    Math.min(
-      1,
-      ((point.x - startPoint.x) * segmentX + (point.y - startPoint.y) * segmentY) / segmentLengthSquared
-    )
-  );
-
-  const closestX = startPoint.x + projection * segmentX;
-  const closestY = startPoint.y + projection * segmentY;
-  const dx = point.x - closestX;
-  const dy = point.y - closestY;
-
-  return Math.sqrt(dx * dx + dy * dy) / 1000;
-};
-
-const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-};
-
-const floodTiles: FloodTile[] = (() => {
-  const tiles: FloodTile[] = [];
-  const latStep = (pampangaBounds.north - pampangaBounds.south) / 128;
-  const lngStep = (pampangaBounds.east - pampangaBounds.west) / 128;
-
-  for (let lat = pampangaBounds.south; lat <= pampangaBounds.north; lat += latStep) {
-    for (let lng = pampangaBounds.west; lng <= pampangaBounds.east; lng += lngStep) {
-      const corridorDistance = Math.min(
-        ...floodCorridors.map(([start, end]) => distanceToSegmentKm(lat, lng, start, end))
-      );
-
-      const centerInfluenceSum = floodInfluenceCenters.reduce((sum, center) => {
-        const distance = calculateDistance(lat, lng, center.lat, center.lng);
-        const influence = Math.max(0, 1 - distance / 24) * center.weight;
-        return sum + influence;
-      }, 0);
-      const centerInfluence = centerInfluenceSum / floodInfluenceCenters.length;
-
-      const provincialGradient = Math.max(0, 1 - calculateDistance(lat, lng, 15.05, 120.64) / 85) * 0.4;
-      const patternNoise = (Math.sin(lat * 60 + lng * 3.5) + Math.cos(lng * 50 - lat * 4.2)) * 0.08;
-      const corridorInfluence = Math.max(0, 1 - corridorDistance / 7.5);
-      // Heavier weights on corridors and centers to create more diverse high-risk zones
-      const rawIntensity = corridorInfluence * 0.55 + centerInfluence * 0.45 + provincialGradient * 0.15 + patternNoise;
-      const intensity = Math.max(0, Math.min(1, rawIntensity));
-
-      if (intensity < 0.05) continue; // Lowered to cover most of Pampanga
-
-      const level: FloodTileLevel = intensity > 0.65 ? 'high' : intensity > 0.35 ? 'medium' : 'low';
-      tiles.push({
-        level,
-        positions: createTile(lat, lng, latStep * 1.05, lngStep * 1.05), // size matches new 128x128 step + overlap
-      });
-    }
-  }
-
-  return tiles;
-})();
-
-// Custom DivIcons for different establishment types
-// Memoize / cache icons to avoid lag on every render
-const iconCache: Record<string, L.DivIcon> = {};
-
-const getIconForType = (type: string) => {
-  if (iconCache[type]) return iconCache[type];
-
-  let colorClass = "bg-primary shadow-primary/40";
-  let svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1z"/></svg>`; // Shield
-
-  if (type === "Healthcare Facility") {
-    colorClass = "bg-rose-500 shadow-rose-500/40";
-    svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`; // Heart
-  } else if (type === "Emergency Service") {
-    colorClass = "bg-red-500 shadow-red-500/40";
-    svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>`; // Flame
-  } else if (type === "Government Office") {
-    colorClass = "bg-blue-600 shadow-blue-600/40";
-  }
-
-  iconCache[type] = L.divIcon({
-    className: "custom-leaflet-icon",
-    html: `
-      <div class="relative w-12 h-12 -ml-6 -mt-12 group cursor-pointer drop-shadow-xl animate-in zoom-in-50 duration-500">
-        <div class="absolute inset-0 bg-black/10 rounded-xl translate-y-1 blur-[2px] transition-all group-hover:translate-y-2 group-hover:blur-[4px]"></div>
-        <div class="relative w-12 h-12 rounded-[14px] ${colorClass} text-white flex items-center justify-center border-[3px] border-white transition-transform group-hover:-translate-y-1">
-          ${svgIcon}
-        </div>
-        <div class="absolute -bottom-1.5 left-1/2 w-0 h-0 border-l-4 border-r-4 border-t-8 border-transparent border-t-white -translate-x-1/2 group-hover:-translate-y-1 transition-transform"></div>
-      </div>
-    `,
-    iconSize: [48, 48],
-    iconAnchor: [24, 48],
-    popupAnchor: [0, -50],
-  });
-
-  return iconCache[type];
-};
-
-const TyphoonEyeIcon = L.divIcon({
-  className: "custom-typhoon-eye",
-  html: `
-    <div class="relative w-16 h-16 -ml-8 -mt-8">
-      <div class="absolute inset-0 rounded-full bg-red-500/20 animate-ping duration-[3000ms]"></div>
-      <div class="absolute inset-0 rounded-full border-4 border-dashed border-red-600 animate-spin duration-[10000ms]"></div>
-      <div class="absolute inset-1/4 rounded-full bg-red-600 border-2 border-white shadow-lg flex items-center justify-center text-white">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><circle cx="12" cy="12" r="3"/></svg>
-      </div>
-    </div>
-  `,
-  iconSize: [64, 64],
-  iconAnchor: [32, 32],
-});
-
-const ReportPinIcon = L.divIcon({
-  className: "custom-report-icon",
-  html: `
-    <div class="relative w-12 h-12 -ml-6 -mt-12 group cursor-pointer drop-shadow-xl animate-bounce">
-      <div class="absolute inset-0 bg-red-600/20 rounded-xl translate-y-1 blur-[3px]"></div>
-      <div class="relative w-12 h-12 rounded-[14px] bg-red-600 text-white flex items-center justify-center border-[3px] border-white z-10">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-      </div>
-      <div class="absolute -bottom-1.5 left-1/2 w-0 h-0 border-l-4 border-r-4 border-t-8 border-transparent border-t-white -translate-x-1/2 z-10"></div>
-      <div class="absolute -bottom-2 left-1/2 w-6 h-2 bg-black/20 blur-[2px] rounded-full -translate-x-1/2"></div>
-    </div>
-  `,
-  iconSize: [48, 48],
-  iconAnchor: [24, 48],
-});
-
-const OpenIncidentIcon = L.divIcon({
-  className: 'custom-open-incident-icon',
-  html: `
-    <div class="relative w-10 h-10 -ml-5 -mt-10">
-      <div class="absolute inset-0 rounded-full bg-red-500/30 animate-ping"></div>
-      <div class="absolute inset-0 rounded-full bg-red-600 border-2 border-white flex items-center justify-center text-white shadow-lg">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-      </div>
-    </div>
-  `,
-  iconSize: [40, 40],
-  iconAnchor: [20, 40],
-});
-
-const SearchPinIcon = L.divIcon({
-  className: "custom-search-icon",
-  html: `
-    <div class="relative w-12 h-12 -ml-6 -mt-12 group cursor-pointer drop-shadow-xl animate-in zoom-in-50 duration-500">
-      <div class="absolute inset-0 bg-primary/20 rounded-xl translate-y-1 blur-[3px]"></div>
-      <div class="relative w-12 h-12 rounded-[14px] bg-primary text-white flex items-center justify-center border-[3px] border-white z-10 transition-transform group-hover:-translate-y-1">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="11" r="3"/><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 0 1-2.827 0l-4.244-4.243a8 8 0 1 1 11.314 0z"/></svg>
-      </div>
-      <div class="absolute -bottom-1.5 left-1/2 w-0 h-0 border-l-4 border-r-4 border-t-8 border-transparent border-t-white -translate-x-1/2 z-10 transition-transform group-hover:-translate-y-1"></div>
-    </div>
-  `,
-  iconSize: [48, 48],
-  iconAnchor: [24, 48],
-  popupAnchor: [0, -50],
-});
-
-// A small component to handle map clicks safely
+// Internal Map Controller components
 const MapEvents = ({ onMapClick }: { onMapClick?: (lat: number, lng: number) => void }) => {
   const map = useMap();
   useEffect(() => {
@@ -308,7 +69,7 @@ const MapEvents = ({ onMapClick }: { onMapClick?: (lat: number, lng: number) => 
   return null;
 };
 
-const MapController = ({ focusPin, stormFocus }: {
+const MapController = ({ focusPin, stormFocus }: { 
   focusPin?: { lat: number, lng: number } | null,
   stormFocus?: [number, number] | null
 }) => {
@@ -323,7 +84,79 @@ const MapController = ({ focusPin, stormFocus }: {
   return null;
 };
 
+const MapViewportTracker = ({ onBoundsChange }: { onBoundsChange: (bounds: L.LatLngBounds) => void }) => {
+  const map = useMap();
 
+  useEffect(() => {
+    const syncBounds = () => onBoundsChange(map.getBounds());
+
+    syncBounds();
+
+    map.on('moveend', syncBounds);
+    map.on('zoomend', syncBounds);
+
+    return () => {
+      map.off('moveend', syncBounds);
+      map.off('zoomend', syncBounds);
+    };
+  }, [map, onBoundsChange]);
+
+  return null;
+};
+
+// Icons
+const SearchPinIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+const ReportPinIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+const OpenIncidentIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+const TyphoonEyeIcon = L.divIcon({
+  className: 'custom-typhoon-eye',
+  html: renderToStaticMarkup(
+    <div className="relative flex items-center justify-center">
+      <div className="absolute w-12 h-12 bg-red-500/20 rounded-full animate-ping"></div>
+      <div className="relative w-8 h-8 bg-red-600 rounded-full flex items-center justify-center border-4 border-white shadow-xl">
+        <Zap size={14} className="text-white fill-white" />
+      </div>
+    </div>
+  ),
+  iconSize: [32, 32],
+  iconAnchor: [16, 16]
+});
+
+const getIconForType = (type: string) => {
+  const color = type === 'Healthcare Facility' ? 'green' : type === 'Emergency Response' ? 'red' : 'blue';
+  return new L.Icon({
+    iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`,
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+  });
+};
 
 export default function InteractiveMap({
   overlayMode,
@@ -336,39 +169,48 @@ export default function InteractiveMap({
   forceTab,
   forceOpen,
   onReset,
-  onLocationSelect }: InteractiveMapProps) {
-  const [isMounted, setIsMounted] = React.useState(false);
+  onLocationSelect,
+  onShowXai
+}: InteractiveMapProps) {
+  const [isMounted, setIsMounted] = useState(false);
   const { facilities } = useFacilities();
-  const [liveTyphoon, setLiveTyphoon] = React.useState<{
+  const [liveTyphoon, setLiveTyphoon] = useState<{
     lat: number,
     lng: number,
     name: string,
     speed: number,
     forecastPath?: [number, number][]
   } | null>(null);
-  const [stormFocusTrigger, setStormFocusTrigger] = React.useState<[number, number] | null>(null);
-  const mapContainerRef = React.useRef<HTMLDivElement>(null);
+  const [stormFocusTrigger, setStormFocusTrigger] = useState<[number, number] | null>(null);
 
-  // Handle hydration to prevent Leaflet errors on the server
-  React.useEffect(() => {
+  useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  const [liveProneAreas, setLiveProneAreas] = React.useState<ProneArea[]>([]);
-  const [liveTrafficSegments, setLiveTrafficSegments] = React.useState<any[]>([]);
+  const [liveProneAreas, setLiveProneAreas] = useState<ProneArea[]>([]);
+  const [predictedProneAreas, setPredictedProneAreas] = useState<PredictedProneArea[]>([]);
+  const [liveTrafficSegments, setLiveTrafficSegments] = useState<any[]>([]);
+  const [roadDebugMode, setRoadDebugMode] = useState(false);
+  const [showLayersModal, setShowLayersModal] = useState(false);
+  const [useTerrainBasemap, setUseTerrainBasemap] = useState(false);
+  const [viewportBounds, setViewportBounds] = useState<L.LatLngBounds | null>(null);
+  const [pluginLayerState, setPluginLayerState] = useState({
+    flood: false,
+    typhoon: false,
+    traffic: false,
+  });
 
-  const fetchLiveProneAreas = React.useCallback(async () => {
+  const fetchLiveProneAreas = useCallback(async () => {
     const data = await AdminHandler.getProneAreas();
     setLiveProneAreas(data);
   }, []);
 
-  const fetchLiveTraffic = React.useCallback(async () => {
+  const fetchLiveTraffic = useCallback(async () => {
     const data = await AdminHandler.getTrafficSegments();
     if (data.length > 0) setLiveTrafficSegments(data);
   }, []);
 
-  // Fetch real-time typhoon data from our new API
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isMounted) return;
     const fetchTyphoon = async () => {
       try {
@@ -386,28 +228,48 @@ export default function InteractiveMap({
     fetchLiveTraffic();
   }, [isMounted, fetchLiveProneAreas, fetchLiveTraffic]);
 
-  const [routePoints, setRoutePoints] = React.useState<[number, number][]>([]);
-  const [routeIsLoading, setRouteIsLoading] = React.useState(false);
+  useEffect(() => {
+    const predicted = ProneAreaPredictionService.predictProneAreas({
+      typhoon: liveTyphoon,
+      incidents: reportedIncidents || [],
+      existingProneAreas: liveProneAreas,
+    });
+    setPredictedProneAreas(predicted);
+  }, [liveTyphoon, reportedIncidents, liveProneAreas]);
 
-  // Realistic Route Generator (OSRM Road Pathfinding)
-  const generateRealisticRoute = React.useCallback(async (start: [number, number], end: [number, number]) => {
+  const [routePoints, setRoutePoints] = useState<[number, number][]>([]);
+  const [routeIsLoading, setRouteIsLoading] = useState(false);
+  const viewportBoundsKeyRef = useRef<string>('');
+
+  const handleViewportBoundsChange = useCallback((bounds: L.LatLngBounds) => {
+    const nextKey = [
+      bounds.getSouthWest().lat.toFixed(5),
+      bounds.getSouthWest().lng.toFixed(5),
+      bounds.getNorthEast().lat.toFixed(5),
+      bounds.getNorthEast().lng.toFixed(5),
+    ].join(':');
+
+    if (viewportBoundsKeyRef.current === nextKey) return;
+
+    viewportBoundsKeyRef.current = nextKey;
+    setViewportBounds(bounds);
+  }, []);
+
+  const generateRealisticRoute = useCallback(async (start: [number, number], end: [number, number]) => {
     setRouteIsLoading(true);
     try {
-      // OSRM expects coordinates in [lng, lat] order
       const url = `https://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`;
       const response = await fetch(url);
       const data = await response.json();
 
       if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
-        // Map [lng, lat] back to Leaflet [lat, lng]
         const coords = data.routes[0].geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]]) as [number, number][];
-        setRoutePoints(coords);
+        setRoutePoints(sampleRoutePoints(coords, 250)); // High-density sample limit to prevent useMemo crashing map
       } else {
         throw new Error("Route discovery failed at the API level.");
       }
     } catch (error) {
-      console.error("Routing engine unavailable, falling back to straight-line path:", error);
-      // Fallback: Maintains the "L-shaped" grid path as a safe default
+      console.warn("Routing engine unavailable (rate limit/network), falling back to straight-line path.");
       const midLat = start[0];
       const midLng = end[1];
       setRoutePoints([start, [midLat, midLng], end]);
@@ -416,36 +278,150 @@ export default function InteractiveMap({
     }
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (overlayMode === 'route' && focusPin) {
-      // Start is either the manually set report pin OR the city center by default
       const startingPoint = reportPin || { lat: 15.0286, lng: 120.6898 };
-
-      const fetchPath = async () => {
-        await generateRealisticRoute(
-          [startingPoint.lat, startingPoint.lng],
-          [focusPin.lat, focusPin.lng]
-        );
-      };
-
-      fetchPath();
+      generateRealisticRoute(
+        [startingPoint.lat, startingPoint.lng],
+        [focusPin.lat, focusPin.lng]
+      );
     }
   }, [overlayMode, focusPin, reportPin, generateRealisticRoute]);
 
-  // Center specifically to San Fernando, Pampanga as requested
   const center: [number, number] = [15.0286, 120.6898];
-  const [localSearchPin, setLocalSearchPin] = React.useState<{ lat: number, lng: number, label?: string } | null>(null);
+  const [localSearchPin, setLocalSearchPin] = useState<{ lat: number, lng: number, label?: string } | null>(null);
 
-  // Geographic boundary for San Fernando validation (Radius approx 10km)
-  const SAN_FERNANDO_BOUNDS = {
-    minLat: 14.95, maxLat: 15.10,
-    minLng: 120.60, maxLng: 120.78
+  // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
+  const floodTiles = useMemo(() => generateFloodTiles(), []);
+
+  const activeSearchPin = focusPin || externalSearchPin || localSearchPin;
+  const openWeatherAPIKey = process.env.NEXT_PUBLIC_OPEN_WEATHER_API_KEY;
+  const mapTilerKey = process.env.NEXT_PUBLIC_OPEN_MAPTILER_API_KEY;
+  const tileUrl = useTerrainBasemap
+    ? 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'
+    : `https://api.maptiler.com/maps/topo-v2/256/{z}/{x}/{y}.png?key=${mapTilerKey}`;
+  const attribution = '&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; OpenStreetMap contributors';
+
+  const roadLayer = liveTrafficSegments.length > 0 ? liveTrafficSegments : trafficThoroughfares;
+  const showFloodOverlay = overlayMode === 'emergency' || overlayMode === 'flood' || pluginLayerState.flood;
+  const showTyphoonOverlay = overlayMode === 'emergency' || overlayMode === 'typhoon' || pluginLayerState.typhoon;
+  const showTrafficOverlay = overlayMode === 'emergency' || overlayMode === 'traffic' || pluginLayerState.traffic;
+
+  useEffect(() => {
+    setPluginLayerState((prev) => ({
+      flood: overlayMode === 'flood' || overlayMode === 'emergency' ? true : prev.flood,
+      typhoon: overlayMode === 'typhoon' || overlayMode === 'emergency' ? true : prev.typhoon,
+      traffic: overlayMode === 'traffic' || overlayMode === 'emergency' ? true : prev.traffic,
+    }));
+  }, [overlayMode]);
+
+  const visibleRoads = roadDebugMode
+    ? roadLayer.filter((road) => {
+        if (!viewportBounds) return true;
+
+        if (Array.isArray(road.center) && road.center.length >= 2) {
+          return viewportBounds.contains([road.center[0], road.center[1]]);
+        }
+
+        if (Array.isArray(road.path)) {
+          return road.path.some((point: [number, number]) => viewportBounds.contains([point[0], point[1]]));
+        }
+
+        return true;
+      })
+    : [];
+
+  const getRoadDebugLabel = (road: any) => {
+    const status = road.status || 'fluid';
+    return `${road.name || 'Road'} • ${String(status).toUpperCase()}`;
   };
 
-  const isWithinSanFernando = (lat: number, lng: number) => {
-    return lat >= SAN_FERNANDO_BOUNDS.minLat && lat <= SAN_FERNANDO_BOUNDS.maxLat &&
-      lng >= SAN_FERNANDO_BOUNDS.minLng && lng <= SAN_FERNANDO_BOUNDS.maxLng;
+  const handleLocationSelect = (lat: number, lng: number, label: string) => {
+    const isLocal = isWithinSanFernando(lat, lng);
+    if (!isLocal && label === "Your Current Location") {
+      toast.warning("You are currently outside San Fernando. Emergency response metrics may be limited.");
+    }
+    setLocalSearchPin({ lat, lng, label });
+    if (onLocationSelect) {
+      onLocationSelect(lat, lng, label);
+    }
   };
+
+  const handleReset = () => {
+    setLocalSearchPin(null);
+    if (onReset) onReset();
+  };
+
+  const forecastPath = liveTyphoon?.forecastPath || [];
+  const typhoonCenter: [number, number] = forecastPath.length > 0
+    ? [...forecastPath[0]] as [number, number]
+    : (liveTyphoon ? [liveTyphoon.lat, liveTyphoon.lng] : [14.9500, 120.8000]);
+  const typhoonRadius = liveTyphoon ? (liveTyphoon.speed * 1000) : 15000;
+  const typhoonName = liveTyphoon?.name || "Simulated Tropical Storm";
+
+  const haversineKm = useCallback((a: [number, number], b: [number, number]) => {
+    const toRad = (v: number) => (v * Math.PI) / 180;
+    const R = 6371;
+    const dLat = toRad(b[0] - a[0]);
+    const dLng = toRad(b[1] - a[1]);
+    const aa =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(a[0])) * Math.cos(toRad(b[0])) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(aa), Math.sqrt(1 - aa));
+    return R * c;
+  }, []);
+
+  const inferTrafficFromLabel = useCallback((): TrafficStatus => {
+    const label = focusPin?.label || '';
+    const match = label.match(/\[traffic:(low|moderate|heavy)\]/i);
+    const token = match?.[1]?.toLowerCase();
+    if (token === 'low') return 'fluid';
+    if (token === 'heavy') return 'heavy';
+    return 'moderate';
+  }, [focusPin?.label]);
+
+  const nearestRoadStatus = useCallback((point: [number, number]): TrafficStatus => {
+    const fallback = inferTrafficFromLabel();
+    let best: { dist: number; status: TrafficStatus } = { dist: Number.POSITIVE_INFINITY, status: fallback };
+
+    for (const road of roadLayer) {
+      if (!Array.isArray(road?.path)) continue;
+      for (const p of road.path as [number, number][]) {
+        const d = haversineKm(point, [p[0], p[1]]);
+        if (d < best.dist) {
+          const status = road.status === 'heavy' ? 'heavy' : road.status === 'moderate' ? 'moderate' : 'fluid';
+          best = { dist: d, status };
+        }
+      }
+    }
+
+    return best.dist <= 0.55 ? best.status : fallback;
+  }, [haversineKm, inferTrafficFromLabel, roadLayer]);
+
+  const routeSegments = useMemo(() => {
+    if (routePoints.length < 2) return [] as Array<{ points: [number, number][]; status: TrafficStatus }>;
+
+    const segs: Array<{ points: [number, number][]; status: TrafficStatus }> = [];
+    for (let i = 1; i < routePoints.length; i++) {
+      const a = routePoints[i - 1];
+      const b = routePoints[i];
+      const midpoint: [number, number] = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+      segs.push({ points: [a, b], status: nearestRoadStatus(midpoint) });
+    }
+
+    return segs;
+  }, [nearestRoadStatus, routePoints]);
+
+  const routeTelemetry = useMemo(() => {
+    const statuses = routeSegments.map((s) => s.status);
+    return RouteXAIService.buildTelemetry(routePoints, statuses);
+  }, [routePoints, routeSegments]);
+
+  const routeResponseTimeMin = useMemo(() => {
+    if (overlayMode !== 'route' || routeTelemetry.segmentCount === 0) return undefined;
+    return Math.max(6, routeTelemetry.estimatedMinutes);
+  }, [overlayMode, routeTelemetry]);
 
   if (!isMounted) {
     return (
@@ -455,46 +431,8 @@ export default function InteractiveMap({
     );
   }
 
-  // Use global focus pin or external search pin if provided, otherwise use local
-  const activeSearchPin = focusPin || externalSearchPin || localSearchPin;
-
-  const openWeatherAPIKey = process.env.NEXT_PUBLIC_OPEN_WEATHER_API_KEY;
-  const mapTilerKey = process.env.NEXT_PUBLIC_OPEN_MAPTILER_API_KEY;
-  // Use MapTiler Topo V2 to explicitly highlight rivers and natural terrain as requested
-  const tileUrl = `https://api.maptiler.com/maps/topo-v2/256/{z}/{x}/{y}.png?key=${mapTilerKey}`;
-  const attribution = '&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; OpenStreetMap contributors';
-
-  const handleLocationSelect = (lat: number, lng: number, label: string) => {
-    const isLocal = isWithinSanFernando(lat, lng);
-    if (!isLocal && label === "Your Current Location") {
-      toast.warning("You are currently outside San Fernando. Emergency response metrics may be limited.", {
-        description: "Focusing map on your external position."
-      });
-    }
-    setLocalSearchPin({ lat, lng, label });
-    // Propagate to parent state to synchronize globally
-    if (onLocationSelect) {
-      onLocationSelect(lat, lng, label);
-    }
-  };
-
-  const handleReset = () => {
-    setLocalSearchPin(null);
-  };
-
-  const forecastPath = liveTyphoon?.forecastPath || [];
-  // Ensure the eye is ALWAYS the start of the path to prevent "stray lines"
-  const typhoonCenter: [number, number] = forecastPath.length > 0
-    ? [...forecastPath[0]] as [number, number]
-    : (liveTyphoon ? [liveTyphoon.lat, liveTyphoon.lng] : [14.9500, 120.8000]);
-  const typhoonRadius = liveTyphoon ? (liveTyphoon.speed * 1000) : 15000;
-  const typhoonName = liveTyphoon?.name || "Simulated Tropical Storm";
-
   return (
-    <div
-      id="res-q-map-container"
-      className="absolute inset-0 w-full h-full z-0"
-    >
+    <div id="res-q-map-container" className="absolute inset-0 w-full h-full z-0">
       <MapContainer
         key="res-q-interactive-map"
         center={center}
@@ -503,407 +441,391 @@ export default function InteractiveMap({
         style={{ width: '100%', height: '100%' }}
         zoomControl={false}
       >
-        <TileLayer
-          attribution={attribution}
-          url={tileUrl}
-        />
+        <LayersControl position="topright">
+          <LayersControl.BaseLayer checked={!useTerrainBasemap} name="Topo Streets">
+            <TileLayer attribution={attribution} url={`https://api.maptiler.com/maps/topo-v2/256/{z}/{x}/{y}.png?key=${mapTilerKey}`} />
+          </LayersControl.BaseLayer>
+          <LayersControl.BaseLayer checked={useTerrainBasemap} name="Terrain Elevation">
+            <TileLayer attribution={attribution} url={'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'} />
+          </LayersControl.BaseLayer>
 
+          <LayersControl.Overlay checked={pluginLayerState.flood} name="Flood Raster Layer">
+            <LayerGroup
+              eventHandlers={{
+                add: () => setPluginLayerState((prev) => ({ ...prev, flood: true })),
+                remove: () => setPluginLayerState((prev) => ({ ...prev, flood: false })),
+              }}
+            />
+          </LayersControl.Overlay>
+
+          <LayersControl.Overlay checked={pluginLayerState.typhoon} name="Typhoon Wind Layer">
+            <LayerGroup
+              eventHandlers={{
+                add: () => setPluginLayerState((prev) => ({ ...prev, typhoon: true })),
+                remove: () => setPluginLayerState((prev) => ({ ...prev, typhoon: false })),
+              }}
+            />
+          </LayersControl.Overlay>
+
+          <LayersControl.Overlay checked={pluginLayerState.traffic} name="Traffic Congestion Layer">
+            <LayerGroup
+              eventHandlers={{
+                add: () => setPluginLayerState((prev) => ({ ...prev, traffic: true })),
+                remove: () => setPluginLayerState((prev) => ({ ...prev, traffic: false })),
+              }}
+            />
+          </LayersControl.Overlay>
+        </LayersControl>
+        
         <MapEvents onMapClick={overlayMode === 'report' ? onMapClick : undefined} />
-        <MapController
-          focusPin={focusPin || activeSearchPin}
-          stormFocus={stormFocusTrigger}
-        />
+        <MapController focusPin={focusPin || activeSearchPin} stormFocus={stormFocusTrigger} />
+          <MapViewportTracker onBoundsChange={handleViewportBoundsChange} />
 
-        {/* --- Markers for Establishments --- */}
+        {/* Facilities */}
         {facilities.map((est, idx) => (
-          <Marker
-            key={idx}
-            position={[est.Latitude, est.Longitude]}
-            icon={getIconForType(est["Establishment Type"])}
-          >
+          <Marker key={idx} position={[est.Latitude, est.Longitude]} icon={getIconForType(est["Establishment Type"])}>
             <Popup className="font-inter">
               <div className="flex flex-col items-center">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{est["Establishment Type"]}</p>
                 <p className="text-sm font-black text-slate-900 leading-tight mb-2 text-center">{est.Name}</p>
-
                 {est.Phone && (
-                  <a
-                    href={`tel:${est.Phone.split('/')[0].replace(/[^\d+]/g, '')}`}
-                    className="text-[11px] font-bold text-blue-600 mb-4 hover:underline flex items-center gap-1"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
-                    {est.Phone}
+                  <a href={`tel:${est.Phone}`} className="text-[11px] font-bold text-blue-600 mb-4 hover:underline flex items-center gap-1">
+                    <Phone size={10} /> {est.Phone}
                   </a>
                 )}
-
                 <button
                   onClick={() => {
-                    if (onLocationSelect) {
-                      onLocationSelect(est.Latitude, est.Longitude, est.Name);
-                    }
-                    if (onOverlayModeChange) {
-                      onOverlayModeChange('route');
-                    }
+                    handleLocationSelect(est.Latitude, est.Longitude, est.Name);
+                    onOverlayModeChange?.('route');
                   }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
-                  Get Directions
+                  <Navigation size={12} /> Get Directions
                 </button>
               </div>
             </Popup>
           </Marker>
         ))}
 
-        {/* === LIVE TELEMETRY OVERLAYS === */}
-
-        {/* Flood Overlay (Simulated NOAH Hazard Zones) */}
-        {(overlayMode === 'flood' || overlayMode === 'emergency') && (
-          <>
-            {floodTiles.map((tile, index) => {
-              const tileStyle = floodHeatColors[tile.level];
-
-              return (
-                <Polygon
-                  key={`flood-tile-${index}`}
-                  positions={tile.positions}
-                  pathOptions={{
-                    fillColor: tileStyle.fill,
-                    fillOpacity: tileStyle.opacity,
-                    color: "transparent",
-                    weight: 0,
-                  }}
-                />
-              );
-            })}
-          </>
+        {/* Flood Overlay */}
+        {showFloodOverlay && (
+          floodTiles.map((tile, index) => (
+            <Polygon
+              key={`flood-tile-${index}`}
+              positions={tile.positions}
+              pathOptions={{
+                fillColor: floodHeatColors[tile.level]?.fill || '#FDE047',
+                fillOpacity: floodHeatColors[tile.level]?.opacity || 0.4,
+                color: "transparent",
+                weight: 0,
+              }}
+            />
+          ))
         )}
 
-        {/* Typhoon Overlay (OpenWeatherMap Wind + Simulated Eye) */}
-        {(overlayMode === 'typhoon' || overlayMode === 'emergency') && (
+        {/* Typhoon Overlay */}
+        {showTyphoonOverlay && (
           <>
             {openWeatherAPIKey && (
               <TileLayer
                 key="owm-wind"
                 url={`https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${openWeatherAPIKey}`}
                 opacity={0.6}
-                attribution='&copy; <a href="https://openweathermap.org/">OpenWeatherMap</a>'
               />
             )}
-            <Circle
-              center={typhoonCenter}
-              radius={typhoonRadius}
-              pathOptions={{ fillColor: '#ef4444', fillOpacity: 0.35, color: '#dc2626', weight: 4, dashArray: '12, 12' }}
-            />
+            <Circle center={typhoonCenter} radius={typhoonRadius} pathOptions={{ fillColor: '#ef4444', fillOpacity: 0.35, color: '#dc2626', weight: 4, dashArray: '12, 12' }} />
             <Marker position={typhoonCenter} icon={TyphoonEyeIcon} />
-
-            {/* Forecast Track Line */}
             {forecastPath.length > 0 && (
-              <>
-                {/* 1. Cone of Uncertainty (Approximated Polygon) */}
-                {(() => {
-                  const leftPoints: [number, number][] = [];
-                  const rightPoints: [number, number][] = [];
-
-                  forecastPath.forEach((p, i) => {
-                    // Widening cone that follows the path
-                    const spread = 0.05 + (i * 0.12);
-                    // To create a real cone, we offset along the longitude (simplified)
-                    // but we ensure it connects smoothly
-                    leftPoints.push([p[0] + (spread * 0.2), p[1] - (spread * 0.8)]);
-                    rightPoints.unshift([p[0] - (spread * 0.2), p[1] + (spread * 0.8)]);
-                  });
-
-                  const coneCoords = [...leftPoints, ...rightPoints];
-
-                  return (
-                    <Polygon
-                      positions={coneCoords}
-                      pathOptions={{
-                        fillColor: '#ffffff',
-                        fillOpacity: 0.15,
-                        color: '#cbd5e1',
-                        weight: 1,
-                        dashArray: '4, 4'
-                      }}
-                    />
-                  );
-                })()}
-
-                {/* 2. Solid Track Line */}
-                <Polyline
-                  positions={forecastPath}
-                  pathOptions={{
-                    color: '#dc2626',
-                    weight: 3,
-                    opacity: 0.8
-                  }}
-                />
-
-                {/* 3. Trajectory Nodes (Color coded dots) */}
-                {forecastPath.map((p, i) => {
-                  // Color progression: Pink (Immediate) -> Red (Mid) -> Orange (Late)
-                  const nodeColor = i === 0 ? '#ec4899' : i < 3 ? '#dc2626' : '#f97316';
-                  return (
-                    <Circle
-                      key={`track-node-${i}`}
-                      center={p}
-                      radius={1200}
-                      pathOptions={{
-                        fillColor: nodeColor,
-                        fillOpacity: 1,
-                        color: '#ffffff',
-                        weight: 2
-                      }}
-                    />
-                  );
-                })}
-              </>
+              <Polyline positions={forecastPath} pathOptions={{ color: '#dc2626', weight: 3, opacity: 0.8 }} />
             )}
           </>
         )}
 
-        {/* Route Overlay */}
-        {overlayMode === 'route' && routeIsLoading && (
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[2000] bg-white/90 backdrop-blur-xl px-6 py-4 rounded-3xl shadow-2xl border border-primary/20 flex items-center gap-4 animate-in fade-in zoom-in duration-300">
-            <Loader2 className="w-6 h-6 text-primary animate-spin" />
-            <div className="flex flex-col">
-              <p className="text-xs font-black text-slate-900 uppercase tracking-widest">Routing Analysis</p>
-              <p className="text-[10px] font-bold text-primary italic uppercase tracking-tighter">Calculating optimal road path...</p>
-            </div>
-          </div>
-        )}
-
-        {overlayMode === 'route' && (
-          <>
-            <Polyline
-              positions={routePoints}
-              pathOptions={{ color: '#059669', weight: 6, opacity: 0.8 }}
-            />
-            {focusPin && (
-              <>
-                <Circle
-                  center={[focusPin.lat, focusPin.lng]}
-                  radius={500}
-                  pathOptions={{ fillColor: '#ef4444', fillOpacity: 0.1, color: '#ef4444', weight: 1, dashArray: '5, 5' }}
-                />
-                <Marker position={[focusPin.lat, focusPin.lng]} icon={ReportPinIcon}>
-                  <Popup className="font-inter">
-                    <div className="text-center">
-                      <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-1">Route Destination</p>
-                      <p className="text-xs font-bold text-slate-700">{focusPin.label || 'Selected Location'}</p>
-                    </div>
-                  </Popup>
-                </Marker>
-              </>
-            )}
-            {/* Start Marker */}
-            {(() => {
-              const startPos = reportPin || { lat: 15.0286, lng: 120.6898 };
-              return (
-                <Marker position={[startPos.lat, startPos.lng]} icon={getIconForType("Healthcare Facility")}>
-                  <Popup className="font-inter">
-                    <div className="text-center">
-                      <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">Route Start</p>
-                      <p className="text-xs font-bold text-slate-700">{reportPin ? 'Your Location' : 'City Center'}</p>
-                    </div>
-                  </Popup>
-                </Marker>
-              );
-            })()}
-            {/* Auto-focus on the destination */}
-            <MapController focusPin={focusPin} />
-          </>
-        )}
-
-        {/* Admin-Designated Prone Areas (Live from Firestore/Mock) */}
-        {liveProneAreas.map((area) => (
-          <React.Fragment key={area.id}>
-            <Circle
-              center={[area.lat, area.lng]}
-              radius={area.radius}
-              pathOptions={{
-                fillColor: area.status === 'Unfixed' ?
-                  (area.category === 'Fire' ? '#ef4444' : area.category === 'Flood' ? '#2563eb' : '#f59e0b')
-                  : '#059669',
-                fillOpacity: 0.25,
-                color: area.status === 'Unfixed' ? '#dc2626' : '#059669',
-                weight: 3,
-                dashArray: area.status === 'Unfixed' ? '10, 10' : '0'
-              }}
+        {/* Traffic Overlay */}
+        {showTrafficOverlay && (
+          roadLayer.map((road, i) => (
+            <Polyline 
+              key={`traffic-${i}`} 
+              positions={road.path} 
+              pathOptions={{ color: trafficColors[road.status] || '#22c55e', weight: 4, opacity: 0.8 }}
             >
-              <Popup className="font-inter">
-                <div className="min-w-[220px]">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-1.5">
-                      <span className={`w-2 h-2 rounded-full ${area.status === 'Unfixed' ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`}></span>
-                      <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{area.category} Zone</span>
-                    </div>
-                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${area.status === 'Unfixed' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
-                      }`}>
-                      {area.status}
-                    </span>
-                  </div>
-                  <h4 className="text-sm font-black text-slate-900 mb-1">{area.name}</h4>
-                  <p className="text-[10px] font-bold text-slate-500 leading-relaxed italic border-l-2 border-slate-200 pl-2 py-1 bg-slate-50">
-                    "{area.notes}"
-                  </p>
-                  <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
-                    <span className="text-[9px] font-black text-slate-400">REF: {area.id?.substring(0, 8)}</span>
-                    <span className="text-[9px] font-bold text-slate-400">
-                      {area.updatedAt instanceof Date ? area.updatedAt.toLocaleDateString() : area.updatedAt && 'seconds' in area.updatedAt ? new Date(area.updatedAt.seconds * 1000).toLocaleDateString() : ''}
-                    </span>
-                  </div>
+              <Popup>
+                <div className="font-inter">
+                  <p className="text-[10px] font-black uppercase text-slate-400">Road Telemetry</p>
+                  <p className="text-xs font-bold text-slate-900">{road.name}</p>
+                  <p className="text-[11px] font-bold uppercase mt-1">Status: {road.status || 'fluid'}</p>
                 </div>
               </Popup>
-            </Circle>
-            {/* Category Icon at Center */}
-            <Marker
-              position={[area.lat, area.lng]}
-              icon={L.divIcon({
-                className: 'custom-category-icon',
-                html: renderToStaticMarkup(
-                  <div className={`p-1.5 rounded-full bg-white shadow-lg border-2 ${area.category === 'Fire' ? 'border-red-500 text-red-500' :
-                    area.category === 'Flood' ? 'border-blue-500 text-blue-500' :
-                      area.category === 'Accident' ? 'border-amber-500 text-amber-500' : 'border-slate-500 text-slate-500'
-                    }`}>
-                    {area.category === 'Fire' ? <Flame size={12} strokeWidth={3} /> :
-                      area.category === 'Flood' ? <Droplets size={12} strokeWidth={3} /> :
-                        area.category === 'Accident' ? <Car size={12} strokeWidth={3} /> : <AlertTriangle size={12} strokeWidth={3} />}
-                  </div>
-                ),
-                iconSize: [24, 24],
-                iconAnchor: [12, 12]
-              })}
-            />
-          </React.Fragment>
-        ))}
-
-        {/* --- LIVE TRAFFIC TELEMETRY (Merged with KML Data) --- */}
-        {(overlayMode === 'traffic' || overlayMode === 'emergency') && (
-          (liveTrafficSegments.length > 0 ? liveTrafficSegments : trafficThoroughfares).map((road, i) => (
-            <React.Fragment key={`traffic-${i}`}>
-              <Polyline
-                positions={road.path}
-                pathOptions={{
-                  color: trafficColors[road.status] || '#22c55e',
-                  weight: 8,
-                  opacity: 0.15,
-                }}
-              />
-              <Polyline
-                positions={road.path}
-                pathOptions={{
-                  color: trafficColors[road.status] || '#22c55e',
-                  weight: 4,
-                  opacity: 0.8,
-                  lineCap: 'round',
-                  dashArray: road.status === 'heavy' ? '1, 15' : '0'
-                }}
-              >
-                <Popup>
-                  <div className="font-inter">
-                    <p className="text-[10px] font-black uppercase text-slate-400">Road Telemetry</p>
-                    <p className="text-xs font-bold text-slate-900">{road.name}</p>
-                    <p className={`text-[11px] font-black uppercase mt-1 ${road.status === 'heavy' ? 'text-red-600' :
-                      road.status === 'moderate' ? 'text-amber-600' : 'text-emerald-600'
-                      }`}>
-                      Status: {road.status || 'fluid'}
-                    </p>
-                  </div>
-                </Popup>
-              </Polyline>
-            </React.Fragment>
+            </Polyline>
           ))
         )}
 
-        {/* Live unresolved incidents from Firestore */}
-        {reportedIncidents?.map((incident) => (
-          <Marker
-            key={incident.id}
-            position={[incident.location.lat, incident.location.lng]}
-            icon={OpenIncidentIcon}
+        {/* Road Debug Overlay */}
+        {roadDebugMode && visibleRoads.map((road, i) => (
+          <Polyline
+            key={`road-debug-${i}`}
+            positions={road.path}
+            pathOptions={{
+              color: trafficColors[road.status] || '#22c55e',
+              weight: 8,
+              opacity: 0.95,
+              dashArray: road.status === 'heavy' ? '1, 0' : road.status === 'moderate' ? '8, 8' : '14, 10',
+            }}
           >
+            <Tooltip permanent direction="center" className="font-inter">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-900 bg-white/90 px-2 py-1 rounded-lg shadow-sm border border-slate-100">
+                {getRoadDebugLabel(road)}
+              </span>
+            </Tooltip>
             <Popup>
-              <strong>{incident.type.toUpperCase()}</strong>
-              <br />
-              Status: {incident.status}
-              <br />
-              Reporter: {incident.reporter}
-              <br />
-              {incident.location.address}
+              <div className="font-inter">
+                <p className="text-[10px] font-black uppercase text-slate-400">Admin ML Road Debug</p>
+                <p className="text-xs font-bold text-slate-900">{road.name}</p>
+                <p className="text-[11px] font-bold uppercase mt-1">Status: {road.status || 'fluid'}</p>
+                <p className="text-[10px] font-bold text-slate-400 mt-1">Visible in current map bounds</p>
+              </div>
+            </Popup>
+          </Polyline>
+        ))}
+
+        {/* Route Overlay */}
+        {overlayMode === 'route' && (
+          <>
+            {routeSegments.length > 0 ? (
+              routeSegments.map((segment, idx) => (
+                <Polyline
+                  key={`route-segment-${idx}`}
+                  positions={segment.points}
+                  pathOptions={{ color: trafficColors[segment.status] || '#f59e0b', weight: 6, opacity: 0.92 }}
+                />
+              ))
+            ) : (
+              <Polyline positions={routePoints} pathOptions={{ color: '#059669', weight: 6, opacity: 0.9 }} />
+            )}
+            {focusPin && <Marker position={[focusPin.lat, focusPin.lng]} icon={ReportPinIcon} />}
+          </>
+        )}
+
+        {/* Prone Areas */}
+        {liveProneAreas.map((area) => (
+          <Circle
+            key={area.id}
+            center={[area.lat, area.lng]}
+            radius={area.radius}
+            pathOptions={{
+              fillColor: area.status === 'Unfixed' ? (area.category === 'Fire' ? '#ef4444' : '#2563eb') : '#059669',
+              fillOpacity: 0.25,
+              color: area.status === 'Unfixed' ? '#dc2626' : '#059669',
+              weight: 3
+            }}
+          >
+            <Popup className="font-inter">
+              <div className="min-w-[200px]">
+                <h4 className="text-sm font-black text-slate-900">{area.name}</h4>
+                <p className="text-[10px] text-slate-500 italic mt-1 pb-2 border-b border-slate-100">{area.notes}</p>
+                <button 
+                  onClick={() => onShowXai?.('prone_area', area)}
+                  className="w-full mt-3 flex items-center justify-center gap-2 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest"
+                >
+                  <Zap size={12} /> View Proof (ML Logic)
+                </button>
+              </div>
+            </Popup>
+          </Circle>
+        ))}
+
+        {/* Predicted Prone Areas (ML Forecast) */}
+        {(overlayMode === 'flood' || overlayMode === 'typhoon' || overlayMode === 'emergency') && predictedProneAreas.map((area) => (
+          <Circle
+            key={area.id}
+            center={[area.lat, area.lng]}
+            radius={area.radius}
+            pathOptions={{
+              fillColor: '#8b5cf6',
+              fillOpacity: 0.2,
+              color: '#7c3aed',
+              weight: 2,
+              dashArray: '8, 8'
+            }}
+          >
+            <Popup className="font-inter">
+              <div className="min-w-[220px]">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-black text-violet-700 uppercase tracking-widest">ML Forecast Zone</span>
+                  <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">{area.confidence}%</span>
+                </div>
+                <h4 className="text-sm font-black text-slate-900">{area.name}</h4>
+                <p className="text-[10px] font-bold text-slate-600 mt-1">Risk Score: {area.riskScore}/10 • Radius: {area.radius}m</p>
+                <p className="text-[10px] text-slate-500 italic mt-2 pb-2 border-b border-slate-100">{area.notes}</p>
+                <button
+                  onClick={() => onShowXai?.('prone_area', {
+                    ...area,
+                    status: 'Unfixed',
+                    category: 'Flood',
+                  })}
+                  className="w-full mt-3 flex items-center justify-center gap-2 py-2 bg-violet-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest"
+                >
+                  <Zap size={12} /> View Prediction Logic
+                </button>
+              </div>
+            </Popup>
+          </Circle>
+        ))}
+
+        {/* Incidents */}
+        {reportedIncidents?.map((incident) => (
+          <Marker key={incident.id} position={[incident.location.lat, incident.location.lng]} icon={OpenIncidentIcon}>
+            <Popup>
+              <strong>{incident.type.toUpperCase()}</strong> - {incident.status}
+              <br />{incident.location.address}
             </Popup>
           </Marker>
         ))}
 
-        {/* Interactive Reporting Pin */}
+        {/* Reporting/Search Pins */}
         {overlayMode === 'report' && reportPin && (
-          <Marker position={[reportPin.lat, reportPin.lng]} icon={ReportPinIcon}>
-            <Popup>
-              <strong>Incident Coordinates:</strong><br />
-              {reportPin.lat.toFixed(4)}, {reportPin.lng.toFixed(4)}
-            </Popup>
-          </Marker>
+          <Marker position={[reportPin.lat, reportPin.lng]} icon={ReportPinIcon} />
         )}
-
-        {/* Search Result Pin */}
         {activeSearchPin && (
           <Marker position={[activeSearchPin.lat, activeSearchPin.lng]} icon={SearchPinIcon}>
             <Popup className="font-inter">
-              <div className="text-center p-1">
-                <p className="text-[10px] font-black text-primary uppercase tracking-[0.15em] mb-1">Focus Location</p>
-                <p className="text-xs font-bold text-slate-900 leading-tight">
-                  {activeSearchPin.label || "Searched Location"}
-                </p>
-              </div>
+              <p className="text-xs font-bold text-slate-900">{activeSearchPin.label || "Selected Location"}</p>
             </Popup>
           </Marker>
         )}
       </MapContainer>
 
-      {/* --- HAZARD LEGEND OVERLAY --- */}
+      {/* Hazard Legend Overlay */}
       {(overlayMode === 'flood' || overlayMode === 'typhoon') && (
-        <div className="absolute bottom-8 left-8 z-[1000] bg-white/95 backdrop-blur-md p-4 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] border border-slate-100 font-inter min-w-[130px] animate-in fade-in zoom-in duration-300">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-xs font-black uppercase text-slate-800 tracking-wider">Flood Tiles</h4>
-            <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div>
+        <div className="absolute bottom-8 left-8 z-[1000] bg-white/95 backdrop-blur-md p-4 rounded-xl shadow-2xl border border-slate-100 font-inter animate-in fade-in zoom-in">
+          <div className="flex items-center justify-between mb-3 gap-3">
+            <h4 className="text-xs font-black uppercase text-slate-800">Hazard Intensity</h4>
+            <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full bg-amber-500 text-white">ML Raster</span>
           </div>
           <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="w-6 h-6 rounded-[6px] bg-[#FDE047] shadow-sm border border-[#FBBF24]/60 flex-shrink-0"></div>
-              <span className="text-sm font-medium text-[#FBBF24]">Low</span>
+            <div className="flex items-center gap-3"><div className="w-4 h-4 rounded bg-[#FDE047]"></div><span className="text-xs font-bold text-slate-600">Low</span></div>
+            <div className="flex items-center gap-3"><div className="w-4 h-4 rounded bg-[#F97316]"></div><span className="text-xs font-bold text-slate-600">Medium</span></div>
+            <div className="flex items-center gap-3"><div className="w-4 h-4 rounded bg-[#EF4444]"></div><span className="text-xs font-bold text-slate-600">High</span></div>
+          </div>
+        </div>
+      )}
+
+      {overlayMode === 'route' && routeTelemetry.segmentCount > 0 && (
+        <div className="absolute top-4 right-4 z-[1002] pointer-events-auto">
+          <button
+            onClick={() => onShowXai?.('route', {
+              routeLabel: focusPin?.label || 'Selected Route',
+              etaMinutes: routeTelemetry.estimatedMinutes,
+              traffic: routeTelemetry.statusBreakdownKm.heavy > routeTelemetry.statusBreakdownKm.moderate ? 'heavy' : routeTelemetry.statusBreakdownKm.moderate > 0 ? 'moderate' : 'low',
+              incident: (reportedIncidents || []).length > 0,
+              dist: routeTelemetry.totalDistanceKm,
+              model: routeTelemetry,
+              visibleRoads: roadLayer.length,
+              reportedIncidents: (reportedIncidents || []).length,
+              proneAreas: liveProneAreas.length,
+            })}
+            className="px-4 py-3 rounded-2xl border border-indigo-200 bg-white/95 backdrop-blur-md shadow-lg text-[10px] font-black uppercase tracking-widest text-indigo-700 hover:bg-indigo-50"
+          >
+            View Route Proof + Ask AI
+          </button>
+        </div>
+      )}
+
+      <div className="absolute top-4 left-4 z-[1002] pointer-events-auto flex flex-col gap-2">
+        <button
+          onClick={() => setShowLayersModal(true)}
+          className="flex items-center gap-2 px-4 py-3 rounded-2xl border shadow-lg backdrop-blur-md transition-all font-black uppercase tracking-widest text-[10px] bg-white/95 text-slate-700 border-slate-200 hover:bg-slate-50"
+          title="Map Layers"
+        >
+          <Layers className="w-4 h-4" />
+          Layers
+        </button>
+        <button
+          onClick={() => setRoadDebugMode((prev) => !prev)}
+          className={`flex items-center gap-2 px-4 py-3 rounded-2xl border shadow-lg backdrop-blur-md transition-all font-black uppercase tracking-widest text-[10px] ${roadDebugMode ? 'bg-slate-900 text-white border-slate-800' : 'bg-white/95 text-slate-700 border-slate-200 hover:bg-slate-50'}`}
+          title="Toggle all roads in current viewport"
+        >
+          <Car className="w-4 h-4" />
+          View All Roads
+        </button>
+        {roadDebugMode && (
+          <div className="p-3 rounded-2xl bg-white/95 border border-slate-200 shadow-lg backdrop-blur-md text-[10px] font-bold text-slate-600 max-w-[220px] animate-in fade-in">
+            ✓ Showing all roads in current view<br/>🔴 Red = Heavy traffic<br/>🟡 Amber = Moderate<br/>🟢 Green = Fluid
+          </div>
+        )}
+      </div>
+
+      {showLayersModal && (
+        <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setShowLayersModal(false)} />
+          <div className="relative w-full max-w-md rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Layers className="w-5 h-5 text-sky-600" />
+                <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">Map Layers</h3>
+              </div>
+              <button onClick={() => setShowLayersModal(false)} className="p-2 rounded-lg hover:bg-slate-100">
+                <X className="w-4 h-4 text-slate-500" />
+              </button>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="w-6 h-6 rounded-[6px] bg-[#F97316] shadow-sm border border-[#FB923C]/60 flex-shrink-0"></div>
-              <span className="text-sm font-medium text-[#EA580C]">Medium</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-6 h-6 rounded-[6px] bg-[#EF4444] shadow-sm border border-[#F87171]/60 flex-shrink-0"></div>
-              <span className="text-sm font-medium text-[#DC2626]">High</span>
+
+            <div className="p-5 space-y-4">
+              <button
+                onClick={() => setUseTerrainBasemap((prev) => !prev)}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl border text-left ${useTerrainBasemap ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <Mountain className="w-4 h-4 text-emerald-600" />
+                  <div>
+                    <p className="text-xs font-black text-slate-900">Terrain / Elevation Basemap</p>
+                    <p className="text-[10px] font-bold text-slate-500">Topographic relief visualization</p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-black uppercase px-2 py-1 rounded-full bg-white border border-slate-200">{useTerrainBasemap ? 'On' : 'Off'}</span>
+              </button>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => onOverlayModeChange?.('flood')} className="px-3 py-2 rounded-xl border border-slate-200 text-[10px] font-black uppercase tracking-widest hover:bg-slate-50">Flood</button>
+                <button onClick={() => onOverlayModeChange?.('typhoon')} className="px-3 py-2 rounded-xl border border-slate-200 text-[10px] font-black uppercase tracking-widest hover:bg-slate-50">Typhoon</button>
+                <button onClick={() => onOverlayModeChange?.('traffic')} className="px-3 py-2 rounded-xl border border-slate-200 text-[10px] font-black uppercase tracking-widest hover:bg-slate-50">Traffic</button>
+                <button onClick={() => onOverlayModeChange?.('emergency')} className="px-3 py-2 rounded-xl border border-slate-200 text-[10px] font-black uppercase tracking-widest hover:bg-slate-50">Emergency</button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* --- FLOATING UI OVERLAYS --- */}
-      <div className="absolute top-24 right-8 bottom-24 z-[1001] w-full max-w-[450px] pointer-events-auto flex flex-col justify-center animate-in slide-in-from-right-8 duration-500">
-        <RiskLevelPanel
+      {/* UI Panels */}
+      <div className="absolute top-24 right-8 bottom-24 z-[1001] w-full max-w-[450px] pointer-events-auto flex flex-col justify-center">
+        <RiskLevelPanel 
           selectedLocation={focusPin || activeSearchPin}
           onLocationSelect={handleLocationSelect}
-          onReset={onReset || handleReset}
+          onReset={handleReset}
           reportedIncidents={reportedIncidents}
-          onToggleRadar={(type) => onOverlayModeChange && onOverlayModeChange(type as any)}
+          onToggleRadar={(type) => onOverlayModeChange?.(type as any)}
           overlayMode={overlayMode}
           forceTab={forceTab}
           forceOpen={forceOpen}
           typhoonName={typhoonName}
+          routeResponseTimeMin={routeResponseTimeMin}
+          onShowXai={(data) => {
+            // Because RiskLevelPanel has some cards returning prone_area OR route mock data
+            // We safely check if the data has prone area attributes. If not, fallback to route.
+            const isRoute = data.time || data.traffic || data.dist;
+            onShowXai?.(isRoute ? 'route' : 'prone_area', data);
+          }}
           onLocateStorm={() => {
             setStormFocusTrigger([...typhoonCenter]);
-            // Clear trigger after a bit so it can be re-triggered
             setTimeout(() => setStormFocusTrigger(null), 3000);
           }}
         />
       </div>
+
+      {(forceOpen || overlayMode !== 'report') && (
+        <div className="absolute top-32 left-8 z-[1002] w-full max-w-[320px] pointer-events-auto">
+          <SidebarSearch onLocationSelect={handleLocationSelect} onReset={handleReset} initialValue={focusPin?.label} />
+        </div>
+      )}
     </div>
   );
 }

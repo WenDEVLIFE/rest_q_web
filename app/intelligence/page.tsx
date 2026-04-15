@@ -15,6 +15,7 @@ import {
   Layers,
   Wind
 } from 'lucide-react';
+import { MLBadge } from '@/components/UI/MLBadge';
 
 export default function IntelligenceHub() {
   return (
@@ -54,8 +55,11 @@ export default function IntelligenceHub() {
           {/* Module 1: The ETA Matrix */}
           <section id="eta-physics" className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
              <div className="space-y-8">
-                <div className="w-16 h-16 bg-sky-100 text-sky-600 rounded-[28px] flex items-center justify-center shadow-xl shadow-sky-100/50">
-                   <Clock className="w-8 h-8" />
+                <div className="flex items-center justify-between">
+                   <div className="w-16 h-16 bg-sky-100 text-sky-600 rounded-[28px] flex items-center justify-center shadow-xl shadow-sky-100/50">
+                      <Clock className="w-8 h-8" />
+                   </div>
+                   <MLBadge size="sm" variant="solid" label="TSRЕ" />
                 </div>
                 <div>
                    <h2 className="text-4xl font-black tracking-tight mb-4">The Response Time Matrix</h2>
@@ -91,10 +95,10 @@ export default function IntelligenceHub() {
                 <div className="bg-sky-50 p-8 rounded-[32px] border border-sky-100 relative overflow-hidden">
                    <div className="flex items-center gap-3 mb-4 text-sky-700">
                       <Layers className="w-5 h-5" />
-                      <h4 className="text-sm font-black uppercase tracking-widest">The "Milkshake Straw" Analogy</h4>
+                      <h4 className="text-sm font-black uppercase tracking-widest">Operational Notes</h4>
                    </div>
-                   <p className="text-sm font-bold text-sky-900/70 leading-relaxed italic">
-                    "Think of a road like a straw. When the road is empty, it's like drinking water—it’s fast and easy. When there's heavy traffic, it’s like a thick milkshake—everything slows down. If there's a flood or fire, it’s like a piece of ice getting stuck in the straw. Our system figures out how 'thick' the milkshake is and finds a different straw."
+                   <p className="text-sm font-bold text-sky-900/70 leading-relaxed">
+                    The route model combines distance, traffic volume, and hazard penalties directly. The map, admin analytics, and prone-area data all feed the same operational pipeline.
                    </p>
                 </div>
              </div>
@@ -129,8 +133,11 @@ export default function IntelligenceHub() {
           {/* Module 2: Prone Area Intelligence (DBSCAN) */}
           <section id="clustering" className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
              <div className="lg:order-last space-y-8">
-                <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-[28px] flex items-center justify-center shadow-xl shadow-emerald-100/50">
-                   <Activity className="w-8 h-8" />
+                <div className="flex items-center justify-between">
+                   <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-[28px] flex items-center justify-center shadow-xl shadow-emerald-100/50">
+                      <Activity className="w-8 h-8" />
+                   </div>
+                   <MLBadge size="sm" variant="solid" label="DBSCAN" />
                 </div>
                 <div>
                    <h2 className="text-4xl font-black tracking-tight mb-4">Spotting the Crowd</h2>
@@ -200,8 +207,11 @@ export default function IntelligenceHub() {
           {/* Module 3: Speed & Volume (KML Matrix) */}
           <section id="kml-fusion" className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center pb-20 border-b border-slate-100">
              <div className="space-y-8">
-                <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-[28px] flex items-center justify-center shadow-xl shadow-amber-100/50">
-                   <Car className="w-8 h-8" />
+                <div className="flex items-center justify-between">
+                   <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-[28px] flex items-center justify-center shadow-xl shadow-amber-100/50">
+                      <Car className="w-8 h-8" />
+                   </div>
+                   <MLBadge size="sm" variant="solid" label="DATA-FUSION" />
                 </div>
                 <div>
                    <h2 className="text-4xl font-black tracking-tight mb-4">Traffic Spectral Dynamics</h2>

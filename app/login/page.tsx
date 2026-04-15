@@ -31,6 +31,7 @@ export default function LoginPage() {
                          alt="Res-Q Logo"
                          width={200}
                          height={200}
+                         style={{ width: 'auto', height: 'auto' }}
                          className="object-contain"
                          priority
                        />

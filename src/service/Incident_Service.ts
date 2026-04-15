@@ -18,6 +18,7 @@ const INCIDENTS_COLLECTION = "incidents";
 const normalizeIncident = (id: string, raw: Record<string, unknown>): Incident => {
   const timestampRaw = raw.timestamp;
   const timestamp = timestampRaw instanceof Timestamp ? timestampRaw : Timestamp.now();
+  const parsedResponseTime = Number(raw.responseTimeMin);
 
   return {
     id,
@@ -32,6 +33,7 @@ const normalizeIncident = (id: string, raw: Record<string, unknown>): Incident =
     status: (raw.status as IncidentStatus) ?? "pending",
     description: String(raw.description ?? ""),
     severity: (raw.severity as Incident["severity"]) ?? "medium",
+    responseTimeMin: Number.isFinite(parsedResponseTime) && parsedResponseTime > 0 ? parsedResponseTime : undefined,
   };
 };
 

@@ -12,7 +12,8 @@ import {
   MoreVertical,
   AlertCircle
 } from 'lucide-react';
-import { AdminHandler, UserRecord } from '../../src/agents/AdminDashboardAgent/AdminHandler';
+import { AdminHandler } from '../../src/agents/AdminDashboardAgent/AdminHandler';
+import type { UserRecord } from '../../src/types/user_record';
 import { toast } from 'sonner';
 import { Modal } from '../UI/Modal';
 import { UserForm } from './UserForm';

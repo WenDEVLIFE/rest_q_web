@@ -8,7 +8,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../data/firebase';
-import { UserRecord } from '../agents/AdminDashboardAgent/AdminHandler';
+import type { UserRecord } from '../types/user_record';
 
 interface AuthContextType {
   user: User | null;

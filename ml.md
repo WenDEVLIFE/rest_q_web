@@ -1,89 +1,44 @@
-# Res-Q Intelligence System: Research-Grade Technical Specification
+# ML
 
-This document provides the mathematical foundation and algorithmic architecture of the Res-Q Platform. It moves beyond high-level descriptions to define the precise variables, weights, and logic gates used by our system.
+## Finished
+- [x] Route telemetry engine scaffold (RouteXAIService)
+- [x] Segment-level traffic status classification (fluid/moderate/heavy)
+- [x] Segment feature extraction (distance/bearing/curvature/friction)
+- [x] Traffic entropy metric computation
+- [x] Spectral congestion energy computation
+- [x] Reliability index computation
+- [x] Route proof modal integration with telemetry payload
+- [x] AI follow-up question flow in proof modal
+- [x] AI prompt switched to plain-text instruction mode
+- [x] ETA fallback logic prioritized parsed route ETA
+- [x] Topology penalty bounded to prevent outlier spikes
+- [x] ETA inflation mitigation via route-point sampling
+- [x] ETA correction coefficients reduced to avoid 5x over-penalty
+- [x] Canonical single ETA source shared across all route surfaces
+- [x] Confidence calibration against real response-time ground truth
+- [x] Offline/failed telemetry fallback confidence strategy
+- [x] Automatic anomaly detector for inflated ETA outputs
+- [x] ML output validation test suite (unit + scenario snapshots)
+- [x] Threshold tuning workflow for friction/entropy/reliability
+- [x] Drift monitoring for traffic/status distributions
+- [x] Feature importance report export for admin review
+- [x] Dynamic advisories replacing static advisory cards
+- [x] Prone-area proof stats expanded to parity with route proof
 
----
+## Unfinished
 
-> [!IMPORTANT]
-> **Architectural Constraint: Spatial Processing Priority**
-> The system is architected to prioritize **Routing & Physical Spatial Constraints** before injecting AI heuristics. Path traversal ($D_{km}$) and physical road blocks (KML/XLSX) must be finalized before the TSRE Engine applies AI-driven risk weights ($R_{score}$). We calculate the "World" before we calculate the "Brain."
 
----
+## Static Or Hardcoded
+- [x] Fixed speed buckets by traffic class
+- [x] Fixed congestion weight table
+- [x] Fixed curvature contribution coefficient
+- [x] Fixed urban delay cap and constants
+- [x] Fixed confidence interpretation bands
+- [x] Fixed advisory phrasing templates
 
-## 🏛 1. Mathematical Foundation: The TSRE Engine
-
-The **Temporal-Spatial Risk Engine (TSRE)** calculates a dynamic response matrix for every incident.
-
-### A. Composite Response Time (ETA) Formula
-The system calculates the estimated arrival time ($T_{total}$) using a multivariate cost function:
-
-$$T_{total} = (D_{km} \times K_{base}) + \sum_{i=1}^{n} (W_{traffic, i} \times T_{peak}) + \Phi_{hazard} + \Omega_{severity}$$
-
-**Variable Definitions:**
-- $D_{km}$: Euclidean distance between the incident $(x_1, y_1)$ and the responder $(x_2, y_2)$.
-- $K_{base}$: Base traversal constant (default: 2.5 min/km for urban San Fernando).
-- $W_{traffic}$: Hourly congestion density coefficient derived from **KML/XLSX telemetry**.
-- $T_{peak}$: Temporal penalty based on local peak cycles ($0700-0900$ and $1600-1900$ PHT).
-- $\Phi_{hazard}$: Dynamic penalty constant for active hazard overlays ($+500s$ for flood, $+1200s$ for typhoon eye-wall proximity).
-- $\Omega_{severity}$: Priority routing offset (High Severity reduces $T_{total}$ by $15\%$ in the dispatch suggestion, but increases visual alert intensity).
-
----
-
-## 🏗 2. Algorithmic Architecture
-
-### A. Spatial Clustering: DBSCAN Logic
-To identify **Prone Areas** without manual tagging, the system runs a density-based spatial clustering algorithm.
-
-**Formal Definition:**
-Given a set of points $P$:
-1.  **Core Point**: A point $p \in P$ if at least $MinPts$ are within distance $\epsilon$.
-2.  **Border Point**: A point $q$ within distance $\epsilon$ of a core point but has fewer than $MinPts$ neighbors.
-3.  **Noise**: Any point neither core nor border.
-
-**Active Parameters in Res-Q:**
-- $\epsilon$ (Epsilon): $500$ meters.
-- $MinPts$: $4$ incident reports.
-- $T_{window}$: $24$ hours (Clusters decay after this period to prevent stale hazard reporting).
-
-### B. Risk Scoring Model ($R_{score}$)
-The absolute risk level displayed to the user is a weighted sum of historical and real-time indicators:
-
-$$R_{score} = \frac{(\alpha \cdot H_{count}) + (\beta \cdot S_{level}) + (\gamma \cdot \frac{1}{V_{current}})}{N}$$
-
-- $H_{count}$: Historical hazard frequency at the coordinate (from the XLS/KML baseline).
-- $S_{level}$: User-reported severity $(1-10)$.
-- $V_{current}$: Velocity of surrounding traffic (km/hr).
-- $\alpha, \beta, \gamma$: Sensitivity weights ($\alpha=0.45, \beta=0.35, \gamma=0.20$).
-
----
-
-## 🧠 3. Cognitive Inference: XAI & LLM
-
-### A. Explainable AI (XAI) Attribution
-We implement **SHAP-based Attribution** (Shapley Additive Explanations) for our risk UI:
-Each "Reasoning" provided in the RiskLevelPanel is generated by decomposing $R_{score}$ into its local contributions:
-
-$$f(x) = \phi_0 + \sum_{j=1}^{M} \phi_j$$
-
-- $\phi_0$: The baseline risk model prediction.
-- $\phi_j$: The specific contribution of dimension $j$ (Distance, Traffic, or Weather).
-
-### B. LLM Microservice Integration
-The **Innovatech AI Chat** follows a specific prompt-engineering pipeline:
-1.  **Ingestion**: Receives $T_{total}$, $R_{score}$, and active $ProneArea$ metadata.
-2.  **Context Injection**: Sanitizes raw coordinates into local landmarks (e.g., "Near SM Pampanga") using a Geo-fencing lookup.
-3.  **Instruction Set**: Applies a First-Responder mindset (Triage priority) to the response generation.
-
----
-
-## 📊 4. Data Fusion Matrix
-
-| Metric | Source | Formula Logic |
-| :--- | :--- | :--- |
-| **Flood Depth** | OpenWeather/Sensor | $\Delta h = \int (R_{rate} \times D_{time}) - E_{drainage}$ |
-| **Wind Vulnerability** | GDACS | $V_{wind} = (\frac{W_{speed}}{120})^2 \times S_{friction}$ |
-| **Traffic Density** | XLSX/Local | $\rho_{traffic} = \frac{N_{vehicles}}{L_{segment} \times Lanes}$ |
-
----
-*Reference: RT-MANILA-CORE-V2*  
-*Mathematical Validation: Approved April 2026*
+## Unlogical Or Needs Refactor
+- [x] Penalty layers can still overlap conceptually with speed-based ETA terms
+- [x] Route model and TSRE naming/logic boundaries are not fully separated
+- [x] Mixed responsibility: UI modal performs derived modeling math fallback
+- [x] Context payload shape for AI is permissive (any) instead of strict schema
+- [x] Telemetry normalization assumptions are implicit, not policy-driven

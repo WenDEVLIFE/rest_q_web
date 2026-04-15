@@ -42,6 +42,7 @@ export const HomeCard = ({ onActionSelect, onLocationSelect, isSidebar, hasLocat
                         alt="Res-Q Logo"
                         width={200}
                         height={200}
+                        style={{ width: 'auto', height: 'auto' }}
                         className="object-contain"
                         priority
                       />  

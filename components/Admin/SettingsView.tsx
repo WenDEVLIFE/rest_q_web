@@ -16,7 +16,9 @@ import { Button } from '../UI/Button';
 import { toast } from 'sonner';
 
 export const SettingsView = () => {
-  const [aiApiKey, setAiApiKey] = useState('3B3B01DC-ADBC-4293-86D5-97423360C4FC');
+  const defaultAiApiKey = process.env.NEXT_PUBLIC_AI_MICROSERVICE_API_KEY || '';
+  const aiEndpoint = process.env.NEXT_PUBLIC_AI_MICROSERVICE_URL || 'https://innovatechservicesph.com/management/microservices.php?service=ai-chat';
+  const [aiApiKey, setAiApiKey] = useState(defaultAiApiKey);
   const [isSaving, setIsSaving] = useState(false);
 
   // Load from local storage on mount
@@ -133,7 +135,7 @@ export const SettingsView = () => {
               <div className="space-y-4">
                  <div className="bg-slate-50 p-3 rounded-xl">
                     <span className="text-[10px] font-black text-slate-400 uppercase block mb-1">Endpoint</span>
-                    <code className="text-[10px] font-mono font-bold text-primary break-all">innovatechservicesph.com/management/microservices.php?service=ai-chat</code>
+                      <code className="text-[10px] font-mono font-bold text-primary break-all">{aiEndpoint}</code>
                  </div>
                  <div className="bg-slate-50 p-3 rounded-xl">
                     <span className="text-[10px] font-black text-slate-400 uppercase block mb-1">Payload Format</span>

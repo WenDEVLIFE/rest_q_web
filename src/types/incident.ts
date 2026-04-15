@@ -18,6 +18,7 @@ export interface Incident {
   status: IncidentStatus;
   description: string;
   severity: "low" | "medium" | "high";
+  responseTimeMin?: number;
 }
 
 export interface CreateIncidentInput {

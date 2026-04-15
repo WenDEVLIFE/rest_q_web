@@ -9,7 +9,8 @@ import {
   Target
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { getAddressSuggestions, GeocodingResult } from '../../src/service/Map_Service';
+import { getAddressSuggestions, getAddressFromCoordinates, GeocodingResult } from '../../src/service/Map_Service';
+import { AlertDialog } from '../UI/AlertDialog';
 
 interface SidebarSearchProps {
   onLocationSelect?: (lat: number, lng: number, label: string) => void;
@@ -21,6 +22,18 @@ export const SidebarSearch = ({ onLocationSelect, onReset, initialValue }: Sideb
   const [searchQuery, setSearchQuery] = React.useState(initialValue || '');
   const [suggestions, setSuggestions] = React.useState<GeocodingResult[]>([]);
   const [isSearching, setIsSearching] = React.useState(false);
+  const [showOutsideAreaWarning, setShowOutsideAreaWarning] = React.useState(false);
+  const [pendingOutsideLocation, setPendingOutsideLocation] = React.useState<{ lat: number; lng: number; label: string } | null>(null);
+
+  const isWithinSanFernando = (lat: number, lng: number) => {
+    const bounds = {
+      minLat: 14.95,
+      maxLat: 15.10,
+      minLng: 120.60,
+      maxLng: 120.78,
+    };
+    return lat >= bounds.minLat && lat <= bounds.maxLat && lng >= bounds.minLng && lng <= bounds.maxLng;
+  };
 
   // Sync internal search state with external value Changes
   React.useEffect(() => {
@@ -83,11 +96,22 @@ export const SidebarSearch = ({ onLocationSelect, onReset, initialValue }: Sideb
           onClick={() => {
             if ("geolocation" in navigator) {
               toast.promise(
-                new Promise((resolve, reject) => {
+                new Promise(async (resolve, reject) => {
                   navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                      if (onLocationSelect) {
-                        onLocationSelect(pos.coords.latitude, pos.coords.longitude, "Your Current Location");
+                    async (pos) => {
+                      const lat = pos.coords.latitude;
+                      const lng = pos.coords.longitude;
+                      const resolvedAddress = await getAddressFromCoordinates(lat, lng);
+                      const fallback = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                      const locationLabel = resolvedAddress || fallback;
+
+                      setSearchQuery(locationLabel);
+
+                      if (!isWithinSanFernando(lat, lng)) {
+                        setPendingOutsideLocation({ lat, lng, label: locationLabel });
+                        setShowOutsideAreaWarning(true);
+                      } else if (onLocationSelect) {
+                        onLocationSelect(lat, lng, locationLabel);
                       }
                       resolve(pos);
                     },
@@ -130,6 +154,26 @@ export const SidebarSearch = ({ onLocationSelect, onReset, initialValue }: Sideb
           ))}
         </div>
       )}
+
+      <AlertDialog
+        isOpen={showOutsideAreaWarning}
+        onClose={() => {
+          setShowOutsideAreaWarning(false);
+          setPendingOutsideLocation(null);
+        }}
+        onConfirm={() => {
+          if (pendingOutsideLocation && onLocationSelect) {
+            onLocationSelect(pendingOutsideLocation.lat, pendingOutsideLocation.lng, pendingOutsideLocation.label);
+          }
+          setShowOutsideAreaWarning(false);
+          setPendingOutsideLocation(null);
+        }}
+        title="Outside San Fernando"
+        description="Your detected location is outside San Fernando coverage. Routing and ML predictions may be less accurate. Continue anyway?"
+        confirmLabel="Continue"
+        cancelLabel="Cancel"
+        variant="warning"
+      />
     </div>
   );
 

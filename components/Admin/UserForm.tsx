@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { User, Mail, Shield, Activity, Save, Lock } from 'lucide-react';
 import { Button } from '../UI/Button';
 import { Input } from '../UI/Input';
-import { UserRecord } from '../../src/agents/AdminDashboardAgent/AdminHandler';
+import type { UserRecord } from '../../src/types/user_record';
 
 interface UserFormProps {
   initialData?: UserRecord;

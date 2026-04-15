@@ -1,5 +1,7 @@
 "use client";
 
+import * as XLSX from 'xlsx';
+
 export interface ExcelTrafficRow {
   'Road Name'?: string;
   'Coordinates'?: string;
@@ -12,30 +14,19 @@ export class ExcelService {
   /**
    * Fetches and parses the XLSX file from the server
    */
-  static async loadTrafficData(url: string): Promise<ExcelTrafficRow[]> {
+  static async loadTrafficData(filename: string = 'SPEED-AND-TRAFFIC-VOLUME.xlsx'): Promise<ExcelTrafficRow[]> {
     try {
-      const response = await fetch(url);
+      const response = await fetch(`/api/admin/files/${encodeURIComponent(filename)}`);
       if (!response.ok) {
         return [];
       }
 
-      // The spreadsheet parser is optional in this workspace. When it is not installed,
-      // we return an empty registry instead of failing the build/runtime.
       try {
         const arrayBuffer = await response.arrayBuffer();
-        const globalXlsx = (globalThis as typeof globalThis & {
-          XLSX?: {
-            read: (data: ArrayBuffer, options: { type: 'array' }) => { SheetNames: string[]; Sheets: Record<string, unknown> };
-            utils: { sheet_to_json: (sheet: unknown) => ExcelTrafficRow[] };
-          };
-        }).XLSX;
-
-        if (!globalXlsx) return [];
-
-        const workbook = globalXlsx.read(arrayBuffer, { type: 'array' });
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
-        return globalXlsx.utils.sheet_to_json(worksheet) as ExcelTrafficRow[];
+        return XLSX.utils.sheet_to_json(worksheet) as ExcelTrafficRow[];
       } catch {
         return [];
       }

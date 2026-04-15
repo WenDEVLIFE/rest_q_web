@@ -42,3 +42,30 @@ export const getAddressSuggestions = async (query: string): Promise<GeocodingRes
     return [];
   }
 };
+
+/**
+ * Reverse geocoding by coordinates -> full address label.
+ */
+export const getAddressFromCoordinates = async (
+  lat: number,
+  lng: number
+): Promise<string | null> => {
+  try {
+    const response = await fetch(
+      `${BASE_URL}/${lng},${lat}.json?key=${MAPTILER_KEY}`
+    );
+
+    if (!response.ok) {
+      throw new Error('Reverse geocoding request failed');
+    }
+
+    const data = await response.json();
+    const feature = data?.features?.[0];
+
+    if (!feature) return null;
+    return feature.place_name || feature.text || null;
+  } catch (error) {
+    console.error('MapTiler Reverse Geocoding Error:', error);
+    return null;
+  }
+};

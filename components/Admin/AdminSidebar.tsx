@@ -12,13 +12,22 @@ import {
   ShieldAlert,
   LogOut,
   Users,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Brain
 } from 'lucide-react';
 import { APP_ROUTES } from '../../src/constants/routes';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '../../src/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+
+type NavItem = {
+  label: string;
+  icon: any;
+  href: string;
+  iconColor?: string;
+  badge?: string;
+};
 
 export const AdminSidebar = () => {
   const pathname = usePathname();
@@ -38,12 +47,13 @@ export const AdminSidebar = () => {
     }
   };
 
-  const navItems = [
+  const navItems: NavItem[] = [
     { label: 'Overview', icon: LayoutDashboard, href: APP_ROUTES.ADMIN.DASHBOARD },
     { label: 'Monitoring', icon: ShieldAlert, iconColor: 'text-emergency', href: APP_ROUTES.ADMIN.MONITORING },
-    { label: 'Prone Areas', icon: MapPin, href: '/admin?tab=prone-areas' },
+    { label: 'Prone Areas', icon: MapPin, href: '/admin?tab=prone-areas', badge: 'ML' },
     { label: 'Facilities', icon: Building2, href: APP_ROUTES.ADMIN.FACILITIES },
-    { label: 'Analytics', icon: BarChart3, href: APP_ROUTES.ADMIN.ANALYTICS },
+    { label: 'Analytics', icon: BarChart3, href: APP_ROUTES.ADMIN.ANALYTICS, badge: 'ML' },
+    { label: 'ML Insights', icon: Brain, href: '/admin?tab=ml-insights', badge: 'ML' },
     { label: 'Users', icon: Users, href: APP_ROUTES.ADMIN.USERS },
     { label: 'Settings', icon: SettingsIcon, href: '/admin?tab=settings' },
   ];
@@ -58,6 +68,7 @@ export const AdminSidebar = () => {
                 alt="Res-Q Logo"
                 width={100}
                 height={100}
+                style={{ width: 'auto', height: 'auto' }}
                 className="object-contain"
                 priority
               />
@@ -95,6 +106,15 @@ export const AdminSidebar = () => {
             >
               <Icon className={`w-5 h-5 ${item.iconColor && !isActive ? item.iconColor : ''}`} />
               <span className="text-sm font-bold">{item.label}</span>
+              {item.badge && (
+                <span className={`ml-auto text-[9px] font-black px-2 py-1 rounded-full ${
+                  item.badge === 'NEW' 
+                    ? 'bg-emerald-500/20 text-emerald-700' 
+                    : 'bg-indigo-500/20 text-indigo-700'
+                }`}>
+                  {item.badge}
+                </span>
+              )}
             </Link>
           );
         })}

@@ -311,10 +311,36 @@ export class AdminHandler {
     try {
       const q = query(collection(db, this.TRAFFIC_SEGMENTS_COLLECTION));
       const snapshot = await getDocs(q);
-      const segments = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const segments = snapshot.docs.map(doc => {
+        const raw = doc.data() as any;
+
+        const path = Array.isArray(raw.path)
+          ? raw.path
+              .map((point: any) => {
+                if (Array.isArray(point) && point.length >= 2) {
+                  return [Number(point[0]), Number(point[1])] as [number, number];
+                }
+                if (point && typeof point === 'object' && 'lat' in point && 'lng' in point) {
+                  return [Number(point.lat), Number(point.lng)] as [number, number];
+                }
+                return null;
+              })
+              .filter(Boolean)
+          : [];
+
+        const center = raw.center && typeof raw.center === 'object' && 'lat' in raw.center && 'lng' in raw.center
+          ? [Number(raw.center.lat), Number(raw.center.lng)]
+          : Array.isArray(raw.center) && raw.center.length >= 2
+            ? [Number(raw.center[0]), Number(raw.center[1])]
+            : null;
+
+        return {
+          id: doc.id,
+          ...raw,
+          path,
+          center,
+        };
+      });
       return segments;
     } catch (error) {
       console.error("Error fetching traffic segments:", error);
@@ -329,13 +355,49 @@ export class AdminHandler {
     try {
       for (const segment of segments) {
         const ref = doc(db, this.TRAFFIC_SEGMENTS_COLLECTION, segment.id);
+
+        const firestorePath = Array.isArray(segment.path)
+          ? segment.path
+              .map((point: any) => {
+                if (Array.isArray(point) && point.length >= 2) {
+                  return { lat: Number(point[0]), lng: Number(point[1]) };
+                }
+                if (point && typeof point === 'object' && 'lat' in point && 'lng' in point) {
+                  return { lat: Number(point.lat), lng: Number(point.lng) };
+                }
+                return null;
+              })
+              .filter(Boolean)
+          : [];
+
+        const firestoreCenter = Array.isArray(segment.center) && segment.center.length >= 2
+          ? { lat: Number(segment.center[0]), lng: Number(segment.center[1]) }
+          : segment.center && typeof segment.center === 'object' && 'lat' in segment.center && 'lng' in segment.center
+            ? { lat: Number(segment.center.lat), lng: Number(segment.center.lng) }
+            : null;
+
         await setDoc(ref, {
            ...segment,
+           path: firestorePath,
+           center: firestoreCenter,
            updatedAt: Timestamp.now()
         }, { merge: true });
       }
     } catch (error) {
       console.error("Error bulk upserting segments:", error);
+      throw error;
+    }
+  }
+
+  /**
+  * Updates a road segment's name
+  */
+  static async updateSegmentName(id: string, name: string): Promise<void> {
+    try {
+      const ref = doc(db, this.TRAFFIC_SEGMENTS_COLLECTION, id);
+      await updateDoc(ref, { name, updatedAt: Timestamp.now() });
+    } catch (error) {
+      console.error("Error updating segment name:", error);
       throw error;
     }
   }
@@ -349,6 +411,19 @@ export class AdminHandler {
       await updateDoc(ref, { status, updatedAt: Timestamp.now() });
     } catch (error) {
       console.error("Error updating traffic status:", error);
+      throw error;
+    }
+  }
+
+  /**
+  * Deletes a traffic segment
+  */
+  static async deleteTrafficSegment(id: string): Promise<void> {
+    try {
+      const ref = doc(db, this.TRAFFIC_SEGMENTS_COLLECTION, id);
+      await deleteDoc(ref);
+    } catch (error) {
+      console.error("Error deleting traffic segment:", error);
       throw error;
     }
   }

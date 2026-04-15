@@ -14,6 +14,7 @@ import {
   LogOut,
   LayoutDashboard,
   Activity,
+  CheckCircle2,
   Target
 } from 'lucide-react';
 import { useAuth } from '../src/context/AuthContext';
@@ -24,6 +25,7 @@ import { RouteNavigation } from '../components/User/RouteNavigation';
 import { APP_ROUTES } from '../src/constants/routes';
 import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
+import { XaiBreakdown } from '../components/ML/XaiBreakdown';
 import { createIncidentReport, subscribeToOpenIncidents, subscribeToCompleteHistory } from '../src/service/Incident_Service';
 import { Incident } from '../src/types/incident';
 import { useRouter } from 'next/navigation';
@@ -41,7 +43,7 @@ export default function Home() {
   const { user, profile, loading, logout } = useAuth();
   const router = useRouter();
   const [activeView, setActiveView] = useState<'home' | 'report' | 'route' | 'facilities' | 'history'>('home');
-  const [overlayMode, setOverlayMode] = useState<'none' | 'flood' | 'typhoon' | 'route' | 'report' | 'explore' | 'emergency'>('none');
+  const [overlayMode, setOverlayMode] = useState<'none' | 'flood' | 'typhoon' | 'route' | 'report' | 'explore' | 'emergency' | 'traffic'>('none');
   const [reportPin, setReportPin] = useState<{ lat: number, lng: number } | null>(null);
   const [focusPin, setFocusPin] = useState<{ lat: number, lng: number, label: string } | null>(null);
   const [mapPanelTab, setMapPanelTab] = useState<'metrics' | 'advisory' | 'what-to-do' | 'facilities' | undefined>(undefined);
@@ -50,6 +52,11 @@ export default function Home() {
   const [userIncidents, setUserIncidents] = useState<Incident[]>([]);
   const [historyIncidents, setHistoryIncidents] = useState<Incident[]>([]);
   const [showMLDocs, setShowMLDocs] = useState(false);
+  const [xaiModal, setXaiModal] = useState<{ open: boolean; context: 'route' | 'prone_area'; data: any }>({
+    open: false,
+    context: 'route',
+    data: null
+  });
 
   const historyForCurrentUser = historyIncidents.filter((incident) => {
     if (!profile && !user) return false;
@@ -65,6 +72,21 @@ export default function Home() {
     else if (activeView === 'route') setOverlayMode('route');
     else if (overlayMode === 'report' || overlayMode === 'route') setOverlayMode('none');
   }, [activeView]);
+
+  useEffect(() => {
+    if (!xaiModal.open) return;
+    if (!xaiModal.data) {
+      setXaiModal((prev) => ({ ...prev, open: false }));
+      return;
+    }
+
+    const routeContextInactive =
+      xaiModal.context === 'route' && activeView !== 'route' && overlayMode !== 'route' && !isMapPanelOpen;
+
+    if (routeContextInactive) {
+      setXaiModal((prev) => ({ ...prev, open: false }));
+    }
+  }, [xaiModal, activeView, overlayMode, isMapPanelOpen]);
 
   useEffect(() => {
     const unsubscribeMap = subscribeToOpenIncidents(
@@ -199,6 +221,14 @@ export default function Home() {
                   setReportPin({ lat, lng });
                 }
               }}
+              onUpdateEnd={(lat, lng) => {
+                setFocusPin({ lat, lng, label: 'Manual Destination' });
+                setOverlayMode('route');
+              }}
+              onShowXai={(data) => {
+                if (!data) return;
+                setXaiModal({ open: true, context: 'route', data });
+              }}
               reportPin={reportPin}
             />;
       case 'history':
@@ -261,6 +291,10 @@ export default function Home() {
             }}
             forceTab={mapPanelTab}
             forceOpen={isMapPanelOpen}
+            onShowXai={(context, data) => {
+              if (!data) return;
+              setXaiModal({ open: true, context, data });
+            }}
           />
         </div>
       </div>
@@ -554,6 +588,14 @@ export default function Home() {
            </div>
         </div>
       )}
+
+      {/* XAI Breakdown Modal */}
+      <XaiBreakdown
+        isOpen={xaiModal.open && Boolean(xaiModal.data)}
+        onClose={() => setXaiModal((prev) => ({ ...prev, open: false, data: null }))}
+        context={xaiModal.context}
+        data={xaiModal.data}
+      />
 
       {/* Footer System Info */}
       <footer className="absolute bottom-0 w-full z-10 px-12 py-4 flex items-center justify-between text-[10px] font-black text-slate-500/60 uppercase tracking-widest pointer-events-none mix-blend-multiply">
