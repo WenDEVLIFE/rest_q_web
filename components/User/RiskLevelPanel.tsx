@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search,
   ShieldPlus,
@@ -94,7 +94,8 @@ export const RiskLevelPanel = ({
 }: RiskLevelPanelProps) => {
   const [activeTab, setActiveTab] = useState<'metrics' | 'advisory' | 'what-to-do' | 'facilities'>('metrics');
   const [manualIncidentType, setManualIncidentType] = useState<IncidentCategory>('Fire Incident');
-  const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isPlaceSheetVisible, setIsPlaceSheetVisible] = useState(false);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [weatherData, setWeatherData] = useState<any>(null);
   const [proneAreas, setProneAreas] = useState<ProneArea[]>([]);
@@ -139,9 +140,54 @@ export const RiskLevelPanel = ({
     if (forceTab) setActiveTab(forceTab);
   }, [forceTab]);
 
+  const popupPlaceSheet = useCallback((durationMs = 7000) => {
+    setIsPlaceSheetVisible(true);
+
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+    }
+
+    hideTimerRef.current = setTimeout(() => {
+      setIsPlaceSheetVisible(false);
+      hideTimerRef.current = null;
+    }, durationMs);
+  }, []);
+
+  const closePlaceSheet = useCallback(() => {
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+    setIsPlaceSheetVisible(false);
+  }, []);
+
+  const handlePlaceSheetToggle = useCallback(() => {
+    if (isPlaceSheetVisible) {
+      closePlaceSheet();
+      return;
+    }
+    popupPlaceSheet();
+  }, [isPlaceSheetVisible, closePlaceSheet, popupPlaceSheet]);
+
   useEffect(() => {
-    if (forceOpen) setIsCollapsed(false);
-  }, [forceOpen]);
+    popupPlaceSheet(5000);
+  }, [popupPlaceSheet]);
+
+  useEffect(() => {
+    if (forceOpen) popupPlaceSheet(9000);
+  }, [forceOpen, popupPlaceSheet]);
+
+  useEffect(() => {
+    if (selectedLocation) popupPlaceSheet(9000);
+  }, [selectedLocation?.lat, selectedLocation?.lng, popupPlaceSheet]);
+
+  useEffect(() => {
+    return () => {
+      if (hideTimerRef.current) {
+        clearTimeout(hideTimerRef.current);
+      }
+    };
+  }, []);
 
   const nearestReportedIncident = useMemo(() => {
     if (!selectedLocation || reportedIncidents.length === 0) return null;
@@ -664,17 +710,30 @@ export const RiskLevelPanel = ({
   }
 
   return (
-    <div className={`relative w-full bg-white/95 backdrop-blur-3xl rounded-[40px] shadow-[0_32px_80px_-15px_rgba(0,0,0,0.25)] border border-white/40 flex flex-col h-[calc(100vh-160px)] transition-all duration-500 ease-in-out ${isCollapsed ? 'translate-x-[calc(100%-60px)] scale-[0.98] opacity-90' : 'translate-x-0'}`}>
+    <div className={`relative w-full bg-white/95 backdrop-blur-3xl rounded-t-[40px] sm:rounded-[40px] shadow-[0_-12px_40px_rgba(0,0,0,0.12)] sm:shadow-[0_32px_80px_-15px_rgba(0,0,0,0.25)] border border-white/40 flex flex-col h-[85vh] sm:h-[calc(100vh-150px)] transition-all duration-700 ease-in-out transform-gpu ${isPlaceSheetVisible ? 'translate-y-0 sm:translate-x-0 opacity-100' : 'translate-y-full sm:translate-y-0 sm:translate-x-full scale-[0.98] opacity-90'}`}>
 
       {/* Floating Toggle Tab (Google Maps Style) */}
+      {/* Mobile-First Toggle Handle */}
       <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        className={`absolute -left-12 top-1/2 -translate-y-1/2 w-12 h-24 bg-white border border-slate-200 rounded-l-3xl shadow-[-12px_0_30px_rgba(0,0,0,0.15)] flex flex-col items-center justify-center group z-50 hover:bg-slate-50 transition-all active:scale-95 ${isCollapsed ? 'opacity-100' : 'opacity-80 hover:opacity-100'}`}
-        title={isCollapsed ? "Expand Place Sheet" : "Collapse Place Sheet"}
+        onClick={handlePlaceSheetToggle}
+        className={`absolute z-[60] transition-all active:scale-95 flex items-center justify-center
+          left-1/2 -top-12 -translate-x-1/2 w-48 h-12
+          sm:-left-12 sm:top-1/2 sm:-translate-y-1/2 sm:translate-x-0 sm:w-12 sm:h-24 sm:rounded-l-3xl sm:rounded-t-none sm:bg-white sm:border sm:border-slate-200 sm:shadow-[-12px_0_30px_rgba(0,0,0,0.15)] sm:flex-col
+          ${isPlaceSheetVisible ? 'opacity-100' : 'opacity-100 -top-16 translate-y-2'}`}
+        title={isPlaceSheetVisible ? 'Close Place Sheet' : 'Show Place Sheet'}
       >
-        <div className="w-1 h-8 bg-slate-100 rounded-full mb-2 group-hover:bg-primary/20 transition-colors" />
-        <ChevronRight className={`w-6 h-6 text-slate-400 group-hover:text-primary transition-transform duration-500 ${isCollapsed ? 'rotate-180' : 'rotate-0'}`} />
-        <div className="w-1 h-8 bg-slate-100 rounded-full mt-2 group-hover:bg-primary/20 transition-colors" />
+        <div className="sm:hidden w-12 h-1.5 bg-slate-300/60 rounded-full mb-1 group-hover:bg-primary transition-colors ring-4 ring-white/20 backdrop-blur-sm" />
+        
+        <div className="hidden sm:block w-1 h-8 bg-slate-100 rounded-full mb-2 group-hover:bg-primary/20 transition-colors" />
+        <ChevronRight className={`hidden sm:block w-6 h-6 text-slate-400 group-hover:text-primary transition-transform duration-500 ${isPlaceSheetVisible ? 'rotate-0' : 'rotate-180'}`} />
+        <div className="hidden sm:block w-1 h-8 bg-slate-100 rounded-full mt-2 group-hover:bg-primary/20 transition-colors" />
+
+        <div className="sm:hidden absolute bottom-0 flex flex-col items-center gap-1">
+           <span className={`text-[9px] font-black uppercase tracking-[0.2em] transition-all duration-300 ${isPlaceSheetVisible ? 'text-slate-400  mb-2' : 'text-primary drop-shadow-sm bg-white px-4 py-2 rounded-full shadow-xl mb-4 border border-primary/10'}`}>
+            {isPlaceSheetVisible ? 'Dismiss' : 'Risk & Metrics'}
+           </span>
+           {isPlaceSheetVisible && <ChevronDown className="w-5 h-5 text-slate-300 animate-bounce" />}
+        </div>
       </button>
 
       <div className="w-full h-full flex flex-col overflow-hidden rounded-[40px]">

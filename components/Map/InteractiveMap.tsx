@@ -16,7 +16,12 @@ import {
   CloudRain,
   Layers,
   Mountain,
-  X
+  X,
+  Menu,
+  Home,
+  LogOut,
+  Siren,
+  ChevronDown
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -52,6 +57,10 @@ interface InteractiveMapProps {
   onReset?: () => void;
   onLocationSelect?: (lat: number, lng: number, label: string) => void;
   onShowXai?: (context: 'route' | 'prone_area', data: any) => void;
+  onLogout?: () => void;
+  onBackToHome?: () => void;
+  onEmergencyMap?: () => void;
+  profile?: any;
 }
 
 // Internal Map Controller components
@@ -170,7 +179,11 @@ export default function InteractiveMap({
   forceOpen,
   onReset,
   onLocationSelect,
-  onShowXai
+  onShowXai,
+  onLogout,
+  onBackToHome,
+  onEmergencyMap,
+  profile
 }: InteractiveMapProps) {
   const [isMounted, setIsMounted] = useState(false);
   const { facilities } = useFacilities();
@@ -182,6 +195,7 @@ export default function InteractiveMap({
     forecastPath?: [number, number][]
   } | null>(null);
   const [stormFocusTrigger, setStormFocusTrigger] = useState<[number, number] | null>(null);
+  const [showMapMenu, setShowMapMenu] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -711,7 +725,7 @@ export default function InteractiveMap({
 
       {/* Hazard Legend Overlay */}
       {(overlayMode === 'flood' || overlayMode === 'typhoon') && (
-        <div className="absolute bottom-4 left-3 right-3 sm:bottom-8 sm:left-8 sm:right-auto z-[1000] bg-white/95 backdrop-blur-md p-4 rounded-xl shadow-2xl border border-slate-100 font-inter animate-in fade-in zoom-in sm:w-auto">
+        <div className="absolute top-24 right-4 sm:top-auto sm:bottom-8 sm:left-8 sm:right-auto z-[1000] bg-white/95 backdrop-blur-md p-4 rounded-[20px] shadow-2xl border border-slate-100 font-inter animate-in fade-in zoom-in w-auto sm:min-w-[180px]">
           <div className="flex items-center justify-between mb-3 gap-3">
             <h4 className="text-xs font-black uppercase text-slate-800">Hazard Intensity</h4>
             <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full bg-amber-500 text-white">ML Raster</span>
@@ -746,10 +760,10 @@ export default function InteractiveMap({
       )}
 
       <div
-        className={`absolute z-[1002] pointer-events-auto flex flex-col gap-2 ${
+        className={`absolute z-[1002] pointer-events-auto flex flex-col gap-3 ${
           forceOpen || overlayMode === 'emergency'
-            ? 'top-[14.5rem] left-3 sm:left-8'
-            : 'top-4 left-4'
+            ? 'bottom-8 left-3 sm:left-auto sm:right-8'
+            : 'bottom-8 right-8'
         }`}
       >
         <button
@@ -816,7 +830,7 @@ export default function InteractiveMap({
       )}
 
       {/* UI Panels */}
-      <div className="absolute top-24 bottom-24 left-3 right-3 sm:left-auto sm:right-8 z-[1001] w-auto sm:w-full sm:max-w-[450px] pointer-events-auto flex flex-col justify-center">
+      <div className="absolute bottom-0 left-0 right-0 sm:top-24 sm:bottom-24 sm:left-auto sm:right-8 z-[1001] w-full sm:w-[450px] pointer-events-auto flex flex-col justify-end sm:justify-center">
         <RiskLevelPanel 
           selectedLocation={focusPin || activeSearchPin}
           onLocationSelect={handleLocationSelect}
@@ -843,13 +857,97 @@ export default function InteractiveMap({
 
       {(forceOpen || overlayMode !== 'report') && (
         <div
-          className={`absolute left-3 right-3 sm:left-8 sm:right-auto z-[1002] w-auto sm:w-full sm:max-w-[320px] pointer-events-auto ${
-            forceOpen || overlayMode === 'emergency' ? 'top-44' : 'top-32'
-          }`}
+          className={`absolute left-3 right-3 sm:left-1/2 sm:-translate-x-1/2 z-[1002] w-auto sm:w-full sm:max-w-[400px] pointer-events-auto top-4 sm:top-6`}
         >
-          <SidebarSearch onLocationSelect={handleLocationSelect} onReset={handleReset} initialValue={focusPin?.label} />
+          <div className="relative group">
+            <SidebarSearch onLocationSelect={handleLocationSelect} onReset={handleReset} initialValue={focusPin?.label} />
+          </div>
         </div>
       )}
+
+      {/* Modern Navigation Menu */}
+      <div className="absolute top-4 left-4 sm:top-6 sm:left-8 z-[1010] pointer-events-auto">
+        <div className="relative">
+          <button
+            onClick={() => setShowMapMenu(!showMapMenu)}
+            className="flex items-center gap-3 px-4 py-3 bg-white/95 backdrop-blur-xl border border-slate-200 text-slate-900 rounded-2xl shadow-2xl hover:bg-white transition-all active:scale-95 group overflow-hidden"
+          >
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${showMapMenu ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'}`}>
+              {showMapMenu ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </div>
+            <div className="text-left hidden sm:block">
+              <p className="text-[10px] font-black uppercase tracking-widest leading-none text-slate-400">System Menu</p>
+              <p className="text-[11px] font-black text-slate-900 mt-1 uppercase">Navigational Hub</p>
+            </div>
+          </button>
+
+          {showMapMenu && (
+            <>
+              <div className="fixed inset-0 bg-slate-900/10 backdrop-blur-[2px] z-[-1]" onClick={() => setShowMapMenu(false)} />
+              <div className="absolute top-full left-0 mt-3 w-64 bg-white/95 backdrop-blur-2xl border border-slate-200 rounded-[24px] shadow-[0_20px_50px_rgba(0,0,0,0.15)] overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-left">
+                <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-black text-xs">
+                      {profile?.displayName?.[0] || 'U'}
+                    </div>
+                    <div>
+                      <p className="text-xs font-black text-slate-900 truncate max-w-[140px]">{profile?.displayName || 'User Session'}</p>
+                      <p className="text-[9px] font-bold text-primary uppercase italic tracking-tighter">Authorized Personal</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="p-2 space-y-1">
+                  <button
+                    onClick={() => {
+                      onBackToHome?.();
+                      setShowMapMenu(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
+                      <Home className="w-4 h-4" />
+                    </div>
+                    <span className="text-[11px] font-black uppercase tracking-widest">Exit Map Home</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      onEmergencyMap?.();
+                      setShowMapMenu(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center group-hover:bg-red-50 group-hover:text-red-600 transition-colors">
+                      <Siren className="w-4 h-4" />
+                    </div>
+                    <span className="text-[11px] font-black uppercase tracking-widest">Emergency Map</span>
+                  </button>
+
+                  <div className="h-px bg-slate-100 mx-2 my-1" />
+
+                  <button
+                    onClick={() => {
+                      onLogout?.();
+                      setShowMapMenu(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 rounded-xl transition-all group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center text-red-400 group-hover:text-red-600 transition-colors">
+                      <LogOut className="w-4 h-4" />
+                    </div>
+                    <span className="text-[11px] font-black uppercase tracking-widest">Sign Out</span>
+                  </button>
+                </div>
+
+                <div className="p-3 bg-slate-50 text-center">
+                  <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 italic">Secure Session Res-Q Core</p>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
