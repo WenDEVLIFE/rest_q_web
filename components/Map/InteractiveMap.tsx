@@ -723,20 +723,6 @@ export default function InteractiveMap({
         )}
       </MapContainer>
 
-      {/* Hazard Legend Overlay */}
-      {(overlayMode === 'flood' || overlayMode === 'typhoon') && (
-        <div className="absolute top-24 right-4 sm:top-auto sm:bottom-8 sm:left-8 sm:right-auto z-[1000] bg-white/95 backdrop-blur-md p-4 rounded-[20px] shadow-2xl border border-slate-100 font-inter animate-in fade-in zoom-in w-auto sm:min-w-[180px]">
-          <div className="flex items-center justify-between mb-3 gap-3">
-            <h4 className="text-xs font-black uppercase text-slate-800">Hazard Intensity</h4>
-            <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full bg-amber-500 text-white">ML Raster</span>
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center gap-3"><div className="w-4 h-4 rounded bg-[#FDE047]"></div><span className="text-xs font-bold text-slate-600">Low</span></div>
-            <div className="flex items-center gap-3"><div className="w-4 h-4 rounded bg-[#F97316]"></div><span className="text-xs font-bold text-slate-600">Medium</span></div>
-            <div className="flex items-center gap-3"><div className="w-4 h-4 rounded bg-[#EF4444]"></div><span className="text-xs font-bold text-slate-600">High</span></div>
-          </div>
-        </div>
-      )}
 
       {overlayMode === 'route' && routeTelemetry.segmentCount > 0 && (
         <div className="absolute top-4 right-4 z-[1002] pointer-events-auto">
@@ -760,33 +746,57 @@ export default function InteractiveMap({
       )}
 
       <div
-        className={`absolute z-[1002] pointer-events-auto flex flex-col gap-3 ${
+        className={`absolute z-[1005] pointer-events-none flex flex-col gap-4 transition-all duration-500 ${
           forceOpen || overlayMode === 'emergency'
-            ? 'bottom-8 left-3 sm:left-auto sm:right-8'
-            : 'bottom-8 right-8'
+            ? 'bottom-8 left-3 sm:left-auto sm:right-8 sm:items-end'
+            : 'bottom-8 left-8 sm:right-auto items-start'
         }`}
       >
-        <button
-          onClick={() => setShowLayersModal(true)}
-          className="flex items-center gap-2 px-4 py-3 rounded-2xl border shadow-lg backdrop-blur-md transition-all font-black uppercase tracking-widest text-[10px] bg-white/95 text-slate-700 border-slate-200 hover:bg-slate-50"
-          title="Map Layers"
-        >
-          <Layers className="w-4 h-4" />
-          Layers
-        </button>
-        <button
-          onClick={() => setRoadDebugMode((prev) => !prev)}
-          className={`flex items-center gap-2 px-4 py-3 rounded-2xl border shadow-lg backdrop-blur-md transition-all font-black uppercase tracking-widest text-[10px] ${roadDebugMode ? 'bg-slate-900 text-white border-slate-800' : 'bg-white/95 text-slate-700 border-slate-200 hover:bg-slate-50'}`}
-          title="Toggle all roads in current viewport"
-        >
-          <Car className="w-4 h-4" />
-          View All Roads
-        </button>
-        {roadDebugMode && (
-          <div className="p-3 rounded-2xl bg-white/95 border border-slate-200 shadow-lg backdrop-blur-md text-[10px] font-bold text-slate-600 max-w-[220px] animate-in fade-in">
-            ✓ Showing all roads in current view<br/>🔴 Red = Heavy traffic<br/>🟡 Amber = Moderate<br/>🟢 Green = Fluid
+        {/* Unified Hazard Intensity Legend */}
+        {(overlayMode === 'flood' || overlayMode === 'typhoon') && (
+          <div className="pointer-events-auto bg-white/95 backdrop-blur-md p-4 rounded-[20px] shadow-xl border border-slate-100 font-inter animate-in fade-in slide-in-from-left-4 w-auto min-w-[160px] sm:min-w-[180px]">
+             <div className="flex items-center justify-between mb-3 gap-3">
+              <h4 className="text-xs font-black uppercase text-slate-800">Hazard Intensity</h4>
+              <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full bg-amber-500 text-white">ML Raster</span>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-3"><div className="w-4 h-4 rounded bg-[#FDE047]"></div><span className="text-xs font-bold text-slate-600 uppercase text-[10px]">Low Risk</span></div>
+              <div className="flex items-center gap-3"><div className="w-4 h-4 rounded bg-[#F97316]"></div><span className="text-xs font-bold text-slate-600 uppercase text-[10px]">Medium</span></div>
+              <div className="flex items-center gap-3"><div className="w-4 h-4 rounded bg-[#EF4444]"></div><span className="text-xs font-bold text-slate-600 uppercase text-[10px]">High / Watch</span></div>
+            </div>
           </div>
         )}
+
+        <div className="pointer-events-auto flex flex-col gap-3 items-start sm:items-inherit">
+          <button
+            onClick={() => setShowLayersModal(true)}
+            className="flex items-center gap-2 px-4 py-3 rounded-2xl border shadow-lg backdrop-blur-md transition-all font-black uppercase tracking-widest text-[10px] bg-white/95 text-slate-700 border-slate-200 hover:bg-slate-50 active:scale-95"
+            title="Map Layers"
+          >
+            <Layers className="w-4 h-4" />
+            Layers
+          </button>
+          
+          <button
+            onClick={() => setRoadDebugMode((prev) => !prev)}
+            className={`flex items-center gap-2 px-4 py-3 rounded-2xl border shadow-lg backdrop-blur-md transition-all font-black uppercase tracking-widest text-[10px] active:scale-95 ${roadDebugMode ? 'bg-slate-900 text-white border-slate-800' : 'bg-white/95 text-slate-700 border-slate-200 hover:bg-slate-50'}`}
+            title="Toggle all roads in current viewport"
+          >
+            <Car className="w-4 h-4" />
+            View All Roads
+          </button>
+
+          {roadDebugMode && (
+            <div className="p-4 rounded-2xl bg-white/95 border border-slate-200 shadow-lg backdrop-blur-md text-[10px] font-bold text-slate-600 min-w-[200px] animate-in fade-in slide-in-from-left-4">
+              <p className="border-b border-slate-100 pb-2 mb-2 uppercase tracking-wider text-primary">Live Road Status</p>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">🔴 <span className="uppercase tracking-tighter">Heavy traffic</span></div>
+                <div className="flex items-center gap-2">🟡 <span className="uppercase tracking-tighter">Moderate</span></div>
+                <div className="flex items-center gap-2">🟢 <span className="uppercase tracking-tighter">Fluid Flow</span></div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {showLayersModal && (
@@ -830,7 +840,7 @@ export default function InteractiveMap({
       )}
 
       {/* UI Panels */}
-      <div className="absolute bottom-0 left-0 right-0 sm:top-24 sm:bottom-24 sm:left-auto sm:right-8 z-[1001] w-full sm:w-[450px] pointer-events-auto flex flex-col justify-end sm:justify-center">
+      <div className="absolute bottom-0 left-0 right-0 sm:top-24 sm:bottom-24 sm:left-auto sm:right-8 z-[1100] w-full sm:w-[450px] pointer-events-auto flex flex-col justify-end sm:justify-center">
         <RiskLevelPanel 
           selectedLocation={focusPin || activeSearchPin}
           onLocationSelect={handleLocationSelect}
@@ -857,7 +867,7 @@ export default function InteractiveMap({
 
       {(forceOpen || overlayMode !== 'report') && (
         <div
-          className={`absolute left-3 right-3 sm:left-1/2 sm:-translate-x-1/2 z-[1002] w-auto sm:w-full sm:max-w-[400px] pointer-events-auto top-4 sm:top-6`}
+          className={`absolute left-20 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-[1002] w-auto sm:w-full sm:max-w-[400px] pointer-events-auto transition-all duration-500 top-24 sm:top-28`}
         >
           <div className="relative group">
             <SidebarSearch onLocationSelect={handleLocationSelect} onReset={handleReset} initialValue={focusPin?.label} />
@@ -866,7 +876,7 @@ export default function InteractiveMap({
       )}
 
       {/* Modern Navigation Menu */}
-      <div className="absolute top-4 left-4 sm:top-6 sm:left-8 z-[1010] pointer-events-auto">
+      <div className="absolute top-24 left-4 sm:top-28 sm:left-8 z-[1010] pointer-events-auto">
         <div className="relative">
           <button
             onClick={() => setShowMapMenu(!showMapMenu)}

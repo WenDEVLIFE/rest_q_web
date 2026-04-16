@@ -710,7 +710,7 @@ export const RiskLevelPanel = ({
   }
 
   return (
-    <div className={`relative w-full bg-white/95 backdrop-blur-3xl rounded-t-[40px] sm:rounded-[40px] shadow-[0_-12px_40px_rgba(0,0,0,0.12)] sm:shadow-[0_32px_80px_-15px_rgba(0,0,0,0.25)] border border-white/40 flex flex-col h-[85vh] sm:h-[calc(100vh-150px)] transition-all duration-700 ease-in-out transform-gpu ${isPlaceSheetVisible ? 'translate-y-0 sm:translate-x-0 opacity-100' : 'translate-y-full sm:translate-y-0 sm:translate-x-full scale-[0.98] opacity-90'}`}>
+    <div className={`relative w-full bg-white/95 backdrop-blur-3xl rounded-t-[40px] sm:rounded-[40px] shadow-[0_-12px_40px_rgba(0,0,0,0.12)] sm:shadow-[0_32px_80px_-15px_rgba(0,0,0,0.25)] border border-white/40 flex flex-col h-[70vh] sm:h-[calc(100vh-150px)] transition-all duration-700 ease-in-out transform-gpu ${isPlaceSheetVisible ? 'translate-y-0 sm:translate-x-0 opacity-100' : 'translate-y-full sm:translate-y-0 sm:translate-x-full scale-[0.98] opacity-90'}`}>
 
       {/* Floating Toggle Tab (Google Maps Style) */}
       {/* Mobile-First Toggle Handle */}
@@ -737,13 +737,8 @@ export const RiskLevelPanel = ({
       </button>
 
       <div className="w-full h-full flex flex-col overflow-hidden rounded-[40px]">
-        {/* Unified Header with Search */}
-        <div className="p-8 pb-6 border-b border-slate-100/50 bg-white/50 backdrop-blur-md">
-          <SidebarSearch
-            onLocationSelect={onLocationSelect}
-            onReset={handleReset}
-            initialValue={selectedLocation?.label}
-          />
+        {/* Unified Header */}
+        <div className="p-8 pb-4 bg-white/50 backdrop-blur-md">
 
           {selectedLocation && activeTab !== 'facilities' && (
             <div className="mt-8 flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-500">
