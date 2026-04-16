@@ -305,7 +305,7 @@ export default function Home() {
       )}
 
       {/* Header Overlay */}
-      <header className="relative z-50 h-20 px-8 flex items-center justify-between bg-white/80 backdrop-blur-lg border-b border-white/60 shadow-sm pointer-events-auto">
+      <header className="relative z-50 min-h-20 px-3 sm:px-8 py-2 flex items-center justify-between gap-3 bg-white/80 backdrop-blur-lg border-b border-white/60 shadow-sm pointer-events-auto">
         <div className="flex items-center gap-4">
           <Image
             src="/logo.png"
@@ -320,16 +320,16 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-2 sm:gap-6 min-w-0">
           <nav className="hidden md:flex items-center gap-8">
             {/* Navigation moved to HomeCard menu */}
           </nav>
 
-          <div className="flex items-center gap-3 pl-6 border-l border-slate-900/10">
+          <div className="flex items-center gap-2 sm:gap-3 pl-3 sm:pl-6 border-l border-slate-900/10 min-w-0">
             {loading ? (
               <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
             ) : profile ? (
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 sm:gap-4 min-w-0">
                 <div className="text-right hidden sm:block">
                   <p className="text-xs font-black text-slate-900 leading-none">{profile.displayName}</p>
                   <p className="text-[10px] font-bold text-primary mt-1 uppercase tracking-tighter italic">System {profile.role}</p>
@@ -345,7 +345,7 @@ export default function Home() {
                 )}
                 <button
                   onClick={handleLogout}
-                  className="p-2.5 bg-white border border-slate-200 text-slate-500 rounded-xl hover:text-red-600 hover:bg-red-50 transition-all active:scale-95"
+                  className="p-2.5 bg-white border border-slate-200 text-slate-500 rounded-xl hover:text-red-600 hover:bg-red-50 transition-all active:scale-95 shrink-0"
                   title="Sign Out"
                 >
                   <LogOut className="w-5 h-5" />
@@ -363,7 +363,7 @@ export default function Home() {
             
             <button 
               onClick={() => setShowMLDocs(true)}
-              className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all active:scale-95 shadow-lg group"
+              className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all active:scale-95 shadow-lg group shrink-0"
               title="System Intelligence Guide"
             >
               <BrainCircuit className="w-5 h-5 group-hover:animate-pulse" />
@@ -381,13 +381,13 @@ export default function Home() {
               setIsMapPanelOpen(false);
               setMapPanelTab(undefined);
             }}
-            className="absolute top-24 left-8 z-[1000] px-6 py-4 bg-white/90 backdrop-blur-xl border border-slate-200 text-slate-900 rounded-[24px] shadow-2xl flex items-center gap-3 font-black text-xs uppercase tracking-widest hover:bg-white hover:border-primary/30 transition-all active:scale-95 group"
+            className="absolute top-24 left-3 right-3 sm:left-8 sm:right-auto z-[1000] px-4 sm:px-6 py-3 sm:py-4 bg-white/90 backdrop-blur-xl border border-slate-200 text-slate-900 rounded-[24px] shadow-2xl flex items-center justify-center sm:justify-start gap-3 font-black text-[10px] sm:text-xs uppercase tracking-widest hover:bg-white hover:border-primary/30 transition-all active:scale-95 group"
           >
             <ChevronRight className="w-5 h-5 rotate-180 text-primary group-hover:-translate-x-1 transition-transform" />
             Back to Home
           </button>
         ) : (
-          <div className="absolute top-24 left-8 z-[1000] bg-slate-900/60 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.3)] p-6 w-80 animate-in fade-in slide-in-from-top-8 duration-500 font-inter text-slate-50">
+          <div className="absolute top-24 left-3 right-3 sm:left-8 sm:right-auto z-[1000] bg-slate-900/60 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.3)] p-4 sm:p-6 w-auto sm:w-80 animate-in fade-in slide-in-from-top-8 duration-500 font-inter text-slate-50">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-sm font-black text-white uppercase tracking-[0.2em] flex items-center gap-2">
@@ -435,7 +435,7 @@ export default function Home() {
 
       {/* Main Content Overlay: Google Maps Side Panel Layout */}
       {!isFullScreenNoahMode && (
-        <main className={`relative z-10 flex-1 flex pointer-events-none ${isMapActive ? 'justify-start' : 'items-center justify-center p-6 sm:p-12'}`}>
+        <main className={`relative z-10 flex-1 flex pointer-events-none ${isMapActive ? 'justify-start' : 'items-center justify-center p-3 sm:p-12'}`}>
           <div
             className={`pointer-events-auto ${!isMapActive
               ? 'w-full flex justify-center translate-y-[-2rem]'
@@ -449,7 +449,7 @@ export default function Home() {
 
       {/* Quick Instructional Toast during Report Mode */}
       {overlayMode === 'report' && !reportPin && (
-        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-full text-sm font-bold shadow-2xl z-50 animate-bounce pointer-events-none">
+        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-[calc(100%-1rem)] max-w-md bg-slate-900 text-white px-4 sm:px-6 py-3 rounded-full text-xs sm:text-sm text-center font-bold shadow-2xl z-50 animate-bounce pointer-events-none">
           Click anywhere on the map to pinpoint emergency!
         </div>
       )}
@@ -458,25 +458,25 @@ export default function Home() {
       {showMLDocs && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-8 animate-in fade-in duration-300">
            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setShowMLDocs(false)} />
-           <div className="relative w-full max-w-4xl max-h-[90vh] bg-white rounded-[40px] shadow-2xl overflow-hidden flex flex-col border border-white/20">
+            <div className="relative w-full max-w-4xl max-h-[90vh] bg-white rounded-[28px] sm:rounded-[40px] shadow-2xl overflow-hidden flex flex-col border border-white/20">
               {/* Modal Header */}
-              <div className="p-8 pb-4 border-b border-slate-100 flex items-center justify-between">
-                 <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-indigo-200">
+              <div className="p-4 sm:p-8 pb-4 border-b border-slate-100 flex items-start sm:items-center justify-between gap-3 sm:gap-4">
+                <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-indigo-200 shrink-0">
                        <BrainCircuit className="w-6 h-6" />
                     </div>
-                    <div>
-                       <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Intelligence Discovery</h2>
-                       <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mt-1 italic">Machine Learning & Prediction Roadmap</p>
+                  <div className="min-w-0">
+                    <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight uppercase leading-tight">Intelligence Discovery</h2>
+                    <p className="text-[9px] sm:text-[10px] font-black text-primary uppercase tracking-[0.2em] mt-1 italic">Machine Learning & Prediction Roadmap</p>
                     </div>
                  </div>
-                 <button onClick={() => setShowMLDocs(false)} className="p-3 bg-slate-50 text-slate-400 rounded-2xl hover:bg-slate-100 transition-all active:scale-90">
+                <button onClick={() => setShowMLDocs(false)} className="p-2.5 sm:p-3 bg-slate-50 text-slate-400 rounded-2xl hover:bg-slate-100 transition-all active:scale-90 shrink-0">
                     <X className="w-6 h-6" />
                  </button>
               </div>
 
               {/* Modal Content */}
-              <div className="flex-1 overflow-y-auto p-8 space-y-12 custom-scrollbar border-t border-slate-50">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-8 sm:space-y-12 custom-scrollbar border-t border-slate-50">
                   <section>
                      <div className="flex items-center gap-3 mb-8">
                         <span className="w-1.5 h-6 bg-primary rounded-full"></span>
@@ -598,7 +598,7 @@ export default function Home() {
       />
 
       {/* Footer System Info */}
-      <footer className="absolute bottom-0 w-full z-10 px-12 py-4 flex items-center justify-between text-[10px] font-black text-slate-500/60 uppercase tracking-widest pointer-events-none mix-blend-multiply">
+      <footer className="hidden sm:flex absolute bottom-0 w-full z-10 px-12 py-4 items-center justify-between text-[10px] font-black text-slate-500/60 uppercase tracking-widest pointer-events-none mix-blend-multiply">
         <p>© 2026 Res-Q Project • Interactive Maps by MapTiler</p>
         <p>Telemetry Ref: RT-MANILA-CORE</p>
       </footer>

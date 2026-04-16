@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { User } from 'lucide-react';
+import { Menu, User, X } from 'lucide-react';
 import { AdminSidebar } from '../../components/Admin/AdminSidebar';
 import { MonitoringView } from '../../components/Admin/MonitoringView';
 import { AnalyticsView } from '../../components/Admin/AnalyticsView';
@@ -22,6 +22,7 @@ export function AdminDashboardClient() {
   const { profile, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'monitoring' | 'analytics' | 'facilities' | 'users' | 'prone-areas' | 'settings' | 'ml-insights'>('overview');
   const [pendingCount, setPendingCount] = useState(0);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && (!profile || profile.role !== 'admin')) {
@@ -81,11 +82,28 @@ export function AdminDashboardClient() {
 
   return (
     <div className="flex min-h-screen bg-white font-inter">
-      <AdminSidebar />
+      <AdminSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+
+      {isSidebarOpen && (
+        <button
+          type="button"
+          aria-label="Close menu overlay"
+          className="fixed inset-0 z-30 bg-slate-900/40 backdrop-blur-[1px] md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
 
       <main className="flex-1 flex flex-col bg-slate-50/30">
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-10">
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-3 sm:px-8 sticky top-0 z-20">
           <div className="flex items-center gap-6">
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen((prev) => !prev)}
+              className="md:hidden p-2 rounded-lg border border-slate-200 bg-white text-slate-600"
+              aria-label="Toggle admin menu"
+            >
+              {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
             <h1 className="text-sm font-black text-slate-900 uppercase tracking-widest">
               <span className="text-primary">{activeTab}</span>
             </h1>
@@ -104,7 +122,7 @@ export function AdminDashboardClient() {
           </div>
         </header>
 
-        <div className="p-8">
+        <div className="p-3 sm:p-8">
           {renderContent()}
         </div>
       </main>

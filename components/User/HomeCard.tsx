@@ -33,9 +33,9 @@ export const HomeCard = ({ onActionSelect, onLocationSelect, isSidebar, hasLocat
   const { profile, loading } = useAuth();
 
   return (
-    <div className={`w-full ${isSidebar ? 'h-full flex flex-col bg-white overflow-hidden' : 'max-w-md bg-white/90 backdrop-blur-xl rounded-[32px] shadow-2xl border border-white/20 overflow-hidden animate-in zoom-in-95 duration-500'} font-inter`}>
+    <div className={`w-full ${isSidebar ? 'h-full flex flex-col bg-white overflow-hidden' : 'max-w-md bg-white/90 backdrop-blur-xl rounded-[28px] sm:rounded-[32px] shadow-2xl border border-white/20 overflow-hidden animate-in zoom-in-95 duration-500'} font-inter`}>
       {/* Header Info */}
-      <div className="p-8 text-center pb-6">
+      <div className="px-4 sm:px-8 pt-6 sm:pt-8 text-center pb-5 sm:pb-6">
           <center>
             <Image
                         src="/logo.png"
@@ -52,11 +52,11 @@ export const HomeCard = ({ onActionSelect, onLocationSelect, isSidebar, hasLocat
         </p>
       </div>
 
-        <div className="px-8 mb-8">
+        <div className="px-4 sm:px-8 mb-6 sm:mb-8">
           <SidebarSearch onLocationSelect={onLocationSelect} initialValue={focusPinLabel} />
         </div>
 
-        <div className={`flex items-center justify-center p-4 rounded-2xl mx-8 mb-6 border transition-all duration-500 ${hasLocation ? 'bg-emerald-50 border-emerald-100' : 'bg-primary/5 border-primary/10'}`}>
+        <div className={`flex items-center justify-center p-3 sm:p-4 rounded-2xl mx-4 sm:mx-8 mb-5 sm:mb-6 border transition-all duration-500 ${hasLocation ? 'bg-emerald-50 border-emerald-100' : 'bg-primary/5 border-primary/10'}`}>
            {hasLocation ? (
              <>
                <CheckCircle2 className="w-4 h-4 text-emerald-600 mr-2 animate-in zoom-in duration-300" />
@@ -71,7 +71,7 @@ export const HomeCard = ({ onActionSelect, onLocationSelect, isSidebar, hasLocat
         </div>
 
       {/* Beta Notice */}
-      <div className={`px-8 mb-6 transition-all duration-500 ${!hasLocation ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
+      <div className={`px-4 sm:px-8 mb-6 transition-all duration-500 ${!hasLocation ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
         <div className="flex items-center justify-center gap-2 mb-4">
           <div className="h-px flex-1 bg-slate-100" />
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
@@ -81,7 +81,7 @@ export const HomeCard = ({ onActionSelect, onLocationSelect, isSidebar, hasLocat
         </div>
 
         {/* Quick Action Icons */}
-        <div className="grid grid-cols-4 gap-4 mb-2">
+        <div className="grid grid-cols-2 min-[360px]:grid-cols-4 gap-3 min-[360px]:gap-4 mb-2">
           <ActionButton
             icon={<CloudRain className="w-6 h-6" />}
             label="Flood Risk"
@@ -114,7 +114,7 @@ export const HomeCard = ({ onActionSelect, onLocationSelect, isSidebar, hasLocat
       </div>
 
       {/* Bottom Footer Action */}
-      <div className="relative z-10 bg-slate-50/80 p-6 flex-1 flex flex-col gap-3 border-t border-slate-100 overflow-y-auto min-h-0 pointer-events-auto">
+      <div className="relative z-10 bg-slate-50/80 p-4 sm:p-6 flex-1 flex flex-col gap-3 border-t border-slate-100 overflow-y-auto min-h-0 pointer-events-auto">
         <button
           type="button"
           onClick={() => onEmergencyMap?.()}

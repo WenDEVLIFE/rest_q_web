@@ -32,7 +32,7 @@ export const Input = ({
         )}
         <input
           className={`
-            w-full py-3 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm 
+            w-full min-h-11 py-3 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm 
             focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary 
             transition-all placeholder:text-slate-400 font-medium
             ${leftIcon ? 'pl-11' : ''}

@@ -153,16 +153,16 @@ export function XaiBreakdown({ isOpen, onClose, context, data }: XaiBreakdownPro
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-5xl max-h-[92vh] overflow-hidden flex flex-col border border-slate-100 animate-in zoom-in-95 duration-300">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="bg-white rounded-[28px] sm:rounded-[40px] shadow-2xl w-full max-w-5xl max-h-[92vh] overflow-hidden flex flex-col border border-slate-100 animate-in zoom-in-95 duration-300">
         {/* Header */}
-        <div className="p-8 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/50">
-          <div className="flex items-center gap-4">
-             <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-slate-900/20">
+        <div className="p-4 sm:p-8 border-b border-slate-100 flex items-start sm:items-center justify-between gap-3 shrink-0 bg-slate-50/50">
+          <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
+             <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-slate-900/20 shrink-0">
                 <Zap className="w-6 h-6 text-amber-400" />
              </div>
-             <div>
-                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter italic">ML Analytical Breakdown</h3>
+             <div className="min-w-0">
+                <h3 className="text-base sm:text-xl font-black text-slate-900 uppercase tracking-tighter italic leading-tight">ML Analytical Breakdown</h3>
                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Structured Logic Attribution + AI Cross-Examination</p>
              </div>
           </div>
@@ -172,7 +172,7 @@ export function XaiBreakdown({ isOpen, onClose, context, data }: XaiBreakdownPro
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-8 space-y-12">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-8 sm:space-y-12">
           
           {/* 1. Global Formula */}
           <section>

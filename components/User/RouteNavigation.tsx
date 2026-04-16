@@ -293,14 +293,14 @@ export const RouteNavigation = ({ onClose, onSelectDestination, onUpdateStart, o
   return (
     <div className="w-full h-full flex flex-col bg-slate-50 overflow-hidden font-inter border-r border-slate-200 shadow-2xl">
       {/* Sleek Header */}
-      <div className="p-6 bg-white border-b border-slate-100 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-4">
+      <div className="p-4 sm:p-6 bg-white border-b border-slate-100 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <div className="w-12 h-12 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-center relative">
             <div className="absolute inset-0 bg-blue-400 rounded-2xl blur opacity-20 animate-pulse"></div>
             <Navigation className="w-6 h-6 text-blue-600 relative z-10" />
           </div>
           <div>
-            <h3 className="font-black text-xl text-slate-900 tracking-tight">Route Planner</h3>
+            <h3 className="font-black text-lg sm:text-xl text-slate-900 tracking-tight">Route Planner</h3>
             <p className="text-[11px] font-bold text-blue-500 uppercase tracking-widest flex items-center gap-1 mt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
               Real-time Pathfinding
@@ -312,7 +312,7 @@ export const RouteNavigation = ({ onClose, onSelectDestination, onUpdateStart, o
         </button>
       </div>
 
-      <div className="p-6 flex-1 overflow-y-auto">
+      <div className="p-4 sm:p-6 flex-1 overflow-y-auto">
         <div className="space-y-5 mb-8 shrink-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
           
           {/* Waypoints Card */}

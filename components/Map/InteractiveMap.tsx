@@ -331,6 +331,20 @@ export default function InteractiveMap({
       })
     : [];
 
+  const hasValidPath = (path: unknown): path is [number, number][] => {
+    return (
+      Array.isArray(path) &&
+      path.length > 0 &&
+      path.every(
+        (point) =>
+          Array.isArray(point) &&
+          point.length >= 2 &&
+          Number.isFinite(point[0]) &&
+          Number.isFinite(point[1])
+      )
+    );
+  };
+
   const getRoadDebugLabel = (road: any) => {
     const status = road.status || 'fluid';
     return `${road.name || 'Road'} • ${String(status).toUpperCase()}`;
@@ -543,7 +557,7 @@ export default function InteractiveMap({
 
         {/* Traffic Overlay */}
         {showTrafficOverlay && (
-          roadLayer.map((road, i) => (
+          roadLayer.filter((road) => hasValidPath(road.path)).map((road, i) => (
             <Polyline 
               key={`traffic-${i}`} 
               positions={road.path} 
@@ -561,7 +575,7 @@ export default function InteractiveMap({
         )}
 
         {/* Road Debug Overlay */}
-        {roadDebugMode && visibleRoads.map((road, i) => (
+        {roadDebugMode && visibleRoads.filter((road) => hasValidPath(road.path)).map((road, i) => (
           <Polyline
             key={`road-debug-${i}`}
             positions={road.path}
@@ -697,7 +711,7 @@ export default function InteractiveMap({
 
       {/* Hazard Legend Overlay */}
       {(overlayMode === 'flood' || overlayMode === 'typhoon') && (
-        <div className="absolute bottom-8 left-8 z-[1000] bg-white/95 backdrop-blur-md p-4 rounded-xl shadow-2xl border border-slate-100 font-inter animate-in fade-in zoom-in">
+        <div className="absolute bottom-4 left-3 right-3 sm:bottom-8 sm:left-8 sm:right-auto z-[1000] bg-white/95 backdrop-blur-md p-4 rounded-xl shadow-2xl border border-slate-100 font-inter animate-in fade-in zoom-in sm:w-auto">
           <div className="flex items-center justify-between mb-3 gap-3">
             <h4 className="text-xs font-black uppercase text-slate-800">Hazard Intensity</h4>
             <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full bg-amber-500 text-white">ML Raster</span>
@@ -731,7 +745,13 @@ export default function InteractiveMap({
         </div>
       )}
 
-      <div className="absolute top-4 left-4 z-[1002] pointer-events-auto flex flex-col gap-2">
+      <div
+        className={`absolute z-[1002] pointer-events-auto flex flex-col gap-2 ${
+          forceOpen || overlayMode === 'emergency'
+            ? 'top-[14.5rem] left-3 sm:left-8'
+            : 'top-4 left-4'
+        }`}
+      >
         <button
           onClick={() => setShowLayersModal(true)}
           className="flex items-center gap-2 px-4 py-3 rounded-2xl border shadow-lg backdrop-blur-md transition-all font-black uppercase tracking-widest text-[10px] bg-white/95 text-slate-700 border-slate-200 hover:bg-slate-50"
@@ -796,7 +816,7 @@ export default function InteractiveMap({
       )}
 
       {/* UI Panels */}
-      <div className="absolute top-24 right-8 bottom-24 z-[1001] w-full max-w-[450px] pointer-events-auto flex flex-col justify-center">
+      <div className="absolute top-24 bottom-24 left-3 right-3 sm:left-auto sm:right-8 z-[1001] w-auto sm:w-full sm:max-w-[450px] pointer-events-auto flex flex-col justify-center">
         <RiskLevelPanel 
           selectedLocation={focusPin || activeSearchPin}
           onLocationSelect={handleLocationSelect}
@@ -822,7 +842,11 @@ export default function InteractiveMap({
       </div>
 
       {(forceOpen || overlayMode !== 'report') && (
-        <div className="absolute top-32 left-8 z-[1002] w-full max-w-[320px] pointer-events-auto">
+        <div
+          className={`absolute left-3 right-3 sm:left-8 sm:right-auto z-[1002] w-auto sm:w-full sm:max-w-[320px] pointer-events-auto ${
+            forceOpen || overlayMode === 'emergency' ? 'top-44' : 'top-32'
+          }`}
+        >
           <SidebarSearch onLocationSelect={handleLocationSelect} onReset={handleReset} initialValue={focusPin?.label} />
         </div>
       )}

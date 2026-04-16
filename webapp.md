@@ -26,6 +26,15 @@
 - [x] XAI modal guarded from opening with empty payload
 - [x] XAI modal auto-close guard when route context inactive
 - [x] Canonical ETA source priority across route planner/map/XAI surfaces
+- [x] Route planner layout verified at 300px width
+- [x] Header actions and user controls verified at 300px width
+- [x] Home card content stack and spacing verified at 300px width
+- [x] Map side panel drawer behavior verified at 300px width
+- [x] Modal widths/heights and overflow behavior verified at 300px width
+- [x] Admin sidebar and tables verified at 300px width
+- [x] All forms input/button tap targets verified at 300px width
+- [x] No horizontal scroll regressions at 300px widthc
+- [x] Tested breakpoints: 300px, 320px, 360px, 390px, 768px, 1024px
 
 ## Unfinished
 - [ ] End-to-end route ETA parity test in live dev session
@@ -49,13 +58,3 @@
 - [ ] Route planner input supports raw coordinates only (no searchable destination input)
 - [ ] Facility search still starts from coordinate parsing instead of structured location model
 
-## Responsiveness (Min 300px)
-- [ ] Route planner layout verified at 300px width
-- [ ] Header actions and user controls verified at 300px width
-- [ ] Home card content stack and spacing verified at 300px width
-- [ ] Map side panel drawer behavior verified at 300px width
-- [ ] Modal widths/heights and overflow behavior verified at 300px width
-- [ ] Admin sidebar and tables verified at 300px width
-- [ ] All forms input/button tap targets verified at 300px width
-- [ ] No horizontal scroll regressions at 300px width
-- [ ] Tested breakpoints: 300px, 320px, 360px, 390px, 768px, 1024px

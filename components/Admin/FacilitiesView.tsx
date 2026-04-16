@@ -81,7 +81,7 @@ export const FacilitiesView = () => {
 
   return (
     <div className="space-y-6 flex-1 w-full animate-in fade-in duration-500 font-inter">
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Building2 className="w-5 h-5 text-primary" />
@@ -90,18 +90,18 @@ export const FacilitiesView = () => {
           <p className="text-sm font-bold text-slate-400">Managed facilities: <span className="text-slate-900">{facilities.length}</span></p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex w-full md:w-auto flex-wrap items-center gap-3">
           <Button onClick={handleCreateFacility} className="shadow-md shadow-primary/10" leftIcon={<Plus className="w-4 h-4" />}>
             Add Facility
           </Button>
-          <div className="relative group">
+          <div className="relative group flex-1 min-w-[220px]">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" />
             <input
               type="text"
               placeholder="Search facilities..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 pr-4 py-2 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-primary/20 focus:ring-4 focus:ring-primary/5 transition-all w-80"
+              className="w-full sm:w-80 pl-9 pr-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-primary/20 focus:ring-4 focus:ring-primary/5 transition-all"
             />
           </div>
           <button type="button" disabled className="p-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-slate-300 cursor-default" title="Realtime data updates automatically">
@@ -111,7 +111,7 @@ export const FacilitiesView = () => {
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overscroll-x-contain">
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">

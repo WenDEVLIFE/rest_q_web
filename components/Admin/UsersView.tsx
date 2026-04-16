@@ -125,7 +125,7 @@ export const UsersView = () => {
   return (
     <div className="space-y-6 flex-1 w-full animate-in fade-in slide-in-from-right-4 duration-500 font-inter">
       {/* Header Controls */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Users className="w-5 h-5 text-primary" />
@@ -134,7 +134,7 @@ export const UsersView = () => {
           <p className="text-sm font-bold text-slate-400">Total registered users: <span className="text-slate-900">{users.length}</span></p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex w-full md:w-auto flex-wrap items-center gap-3">
           <button 
             onClick={handleCreateUser}
             className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:bg-sky-700 transition-all active:scale-95 shadow-md shadow-primary/10"
@@ -143,14 +143,14 @@ export const UsersView = () => {
             Add New User
           </button>
           
-          <div className="relative group">
+          <div className="relative group flex-1 min-w-[220px]">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" />
             <input 
               type="text" 
               placeholder="Search by name, email, or UID..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 pr-4 py-2 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-primary/20 focus:ring-4 focus:ring-primary/5 transition-all w-80"
+              className="w-full sm:w-80 pl-9 pr-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-primary/20 focus:ring-4 focus:ring-primary/5 transition-all"
             />
           </div>
           <button 
@@ -165,7 +165,7 @@ export const UsersView = () => {
 
       {/* Users List Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overscroll-x-contain">
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">

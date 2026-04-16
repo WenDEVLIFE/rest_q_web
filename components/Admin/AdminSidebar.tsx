@@ -29,7 +29,12 @@ type NavItem = {
   badge?: string;
 };
 
-export const AdminSidebar = () => {
+interface AdminSidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export const AdminSidebar = ({ isOpen = false, onClose }: AdminSidebarProps) => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { logout } = useAuth();
@@ -59,7 +64,7 @@ export const AdminSidebar = () => {
   ];
 
   return (
-    <aside className="w-64 bg-surface border-r border-slate-200 h-screen flex flex-col sticky top-0 font-inter">
+    <aside className={`fixed inset-y-0 left-0 z-40 w-[86vw] max-w-64 bg-surface border-r border-slate-200 h-screen flex flex-col font-inter transition-transform duration-300 md:sticky md:top-0 md:z-auto md:w-64 ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
       <div className="p-6">
         <div className="flex items-center gap-3">
          <div className="flex items-center gap-3">
@@ -97,6 +102,7 @@ export const AdminSidebar = () => {
             <Link
               key={item.label}
               href={item.href}
+              onClick={onClose}
               className={`
                 flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
                 ${isActive 
