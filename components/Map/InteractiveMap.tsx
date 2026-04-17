@@ -254,6 +254,7 @@ export default function InteractiveMap({
   const [routePoints, setRoutePoints] = useState<[number, number][]>([]);
   const [routeIsLoading, setRouteIsLoading] = useState(false);
   const viewportBoundsKeyRef = useRef<string>('');
+  const lastRouteRequestKeyRef = useRef<string>('');
 
   const handleViewportBoundsChange = useCallback((bounds: L.LatLngBounds) => {
     const nextKey = [
@@ -293,13 +294,26 @@ export default function InteractiveMap({
   }, []);
 
   useEffect(() => {
-    if (overlayMode === 'route' && focusPin) {
-      const startingPoint = reportPin || { lat: 15.0286, lng: 120.6898 };
-      generateRealisticRoute(
-        [startingPoint.lat, startingPoint.lng],
-        [focusPin.lat, focusPin.lng]
-      );
+    if (overlayMode !== 'route' || !focusPin) {
+      lastRouteRequestKeyRef.current = '';
+      return;
     }
+
+    const startingPoint = reportPin || { lat: 15.0286, lng: 120.6898 };
+    const routeKey = [
+      startingPoint.lat.toFixed(6),
+      startingPoint.lng.toFixed(6),
+      focusPin.lat.toFixed(6),
+      focusPin.lng.toFixed(6),
+    ].join(':');
+
+    if (lastRouteRequestKeyRef.current === routeKey) return;
+
+    lastRouteRequestKeyRef.current = routeKey;
+    generateRealisticRoute(
+      [startingPoint.lat, startingPoint.lng],
+      [focusPin.lat, focusPin.lng]
+    );
   }, [overlayMode, focusPin, reportPin, generateRealisticRoute]);
 
   const center: [number, number] = [15.0286, 120.6898];
