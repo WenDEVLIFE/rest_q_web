@@ -83,7 +83,16 @@ const MapController = ({ focusPin, stormFocus }: {
   stormFocus?: [number, number] | null
 }) => {
   const map = useMap();
+  const lastFocusRef = useRef<string>('');
+
   useEffect(() => {
+    // Prioritize storm focus; only update if focus target actually changed
+    const target = stormFocus ? `storm:${stormFocus[0]},${stormFocus[1]}` : focusPin ? `pin:${focusPin.lat},${focusPin.lng}` : '';
+    
+    if (!target || lastFocusRef.current === target) return;
+    
+    lastFocusRef.current = target;
+    
     if (stormFocus) {
       map.flyTo(stormFocus, 10, { duration: 2 });
     } else if (focusPin) {
@@ -109,6 +118,27 @@ const MapViewportTracker = ({ onBoundsChange }: { onBoundsChange: (bounds: L.Lat
       map.off('zoomend', syncBounds);
     };
   }, [map, onBoundsChange]);
+
+  return null;
+};
+
+const RouteZoomController = ({ routePoints, overlayMode }: { routePoints: [number, number][]; overlayMode: string }) => {
+  const map = useMap();
+  const routeZoomLevelRef = useRef<number>(15);
+
+  useEffect(() => {
+    // When route overlay is active and we have route points, preserve zoom level at 15
+    if (overlayMode === 'route' && routePoints.length > 0) {
+      const currentZoom = map.getZoom();
+      
+      // If zoom is below 14, bring it up to 15 to ensure route visibility
+      if (currentZoom < 14) {
+        map.setZoom(15, { animate: true });
+      } else {
+        routeZoomLevelRef.current = currentZoom;
+      }
+    }
+  }, [routePoints, overlayMode, map]);
 
   return null;
 };
@@ -521,7 +551,8 @@ export default function InteractiveMap({
         
         <MapEvents onMapClick={overlayMode === 'report' ? onMapClick : undefined} />
         <MapController focusPin={focusPin || activeSearchPin} stormFocus={stormFocusTrigger} />
-          <MapViewportTracker onBoundsChange={handleViewportBoundsChange} />
+        <MapViewportTracker onBoundsChange={handleViewportBoundsChange} />
+        <RouteZoomController routePoints={routePoints} overlayMode={overlayMode} />
 
         {/* Facilities */}
         {facilities.map((est, idx) => (
@@ -874,7 +905,7 @@ export default function InteractiveMap({
           }}
           onLocateStorm={() => {
             setStormFocusTrigger([...typhoonCenter]);
-            setTimeout(() => setStormFocusTrigger(null), 3000);
+            setTimeout(() => setStormFocusTrigger(null), 60000);
           }}
         />
       </div>
