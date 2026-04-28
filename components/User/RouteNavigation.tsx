@@ -163,29 +163,29 @@ export const RouteNavigation = ({ onClose, onSelectDestination, onUpdateStart, o
 
     // Simulate brief loading to feel responsive
     setTimeout(() => {
-      // Filter to Emergency Service type only
-      const emergencyFacilities = facilities.filter(f => f["Establishment Type"] === "Emergency Service");
+      // Filter to facilities with valid coordinates
+      const validFacilities = facilities.filter(f => f.Latitude && f.Longitude);
 
-      if (emergencyFacilities.length === 0) {
-        toast.error("No emergency services found in database");
+      if (validFacilities.length === 0) {
+        toast.error("No valid facilities found in database");
         setIsSearching(false);
         return;
       }
 
       // Calculate distances and sort
-      const withDistances = emergencyFacilities.map(f => {
+      const withDistances = validFacilities.map(f => {
         const dist = calculateDistance(userLat, userLng, f.Latitude, f.Longitude);
         return {
           id: f.id || f.Name,
           label: f.Name,
           lat: f.Latitude,
           lng: f.Longitude,
-          type: "Emergency Service",
+          type: f["Establishment Type"],
           distKm: dist,
           dist: `${dist.toFixed(1)} km`
         };
       }).sort((a, b) => a.distKm - b.distKm)
-        .slice(0, 5); // Top 5 nearest
+        .slice(0, 10); // Top 10 nearest
 
       setFoundFacilities(withDistances);
       setIsSearching(false);
@@ -446,7 +446,7 @@ export const RouteNavigation = ({ onClose, onSelectDestination, onUpdateStart, o
                        </div>
                        <div className="text-left">
                           <span className="block text-sm font-black text-slate-900">{f.label}</span>
-                          <span className="block text-[10px] font-bold text-slate-400 mt-0.5">{f.dist} away • Emergency Service</span>
+                          <span className="block text-[10px] font-bold text-slate-400 mt-0.5">{f.dist} away • {f.type || 'Facility'}</span>
                        </div>
                     </div>
                     <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />

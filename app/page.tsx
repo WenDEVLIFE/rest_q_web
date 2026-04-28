@@ -595,7 +595,7 @@ export default function Home() {
       {/* Footer System Info */}
       <footer className="hidden sm:flex absolute bottom-0 w-full z-10 px-12 py-4 items-center justify-between text-[10px] font-black text-slate-500/60 uppercase tracking-widest pointer-events-none mix-blend-multiply">
         <p>© 2026 Res-Q Project • Interactive Maps by MapTiler</p>
-        <p>Telemetry Ref: RT-MANILA-CORE</p>
+        <p>Telemetry Ref: RT-MANILA-CORE • Deployment Ver: 1.0.0</p>
       </footer>
     </div>
   );

@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Res-Q System Architecture · 4-Phase Intelligence Pipeline</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:       #060b14;
+      --bg2:      #0c1422;
+      --bg3:      #111d2e;
+      --border:   rgba(255,255,255,0.07);
+      --text:     #e2eaf4;
+      --muted:    #7b90a8;
+      --accent1:  #3b82f6; /* blue  */
+      --accent2:  #a855f7; /* purple */
+      --accent3:  #22d3ee; /* cyan  */
+      --accent4:  #f59e0b; /* amber */
+      --green:    #10b981;
+      --yellow:   #f59e0b;
+      --red:      #f43f5e;
+      --p1:       #3b82f6;
+      --p2:       #8b5cf6;
+      --p3:       #14b8a6;
+      --p4:       #f97316;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      overflow-x: hidden;
+    }
+
+    /* ── NOISE OVERLAY ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      background-size: 256px;
+      opacity: 0.35;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      padding: 80px 24px 60px;
+      text-align: center;
+      overflow: hidden;
+    }
+    .hero-glow {
+      position: absolute; top: -120px; left: 50%; transform: translateX(-50%);
+      width: 800px; height: 400px;
+      background: radial-gradient(ellipse at center, rgba(59,130,246,0.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      border: 1px solid rgba(59,130,246,0.4);
+      background: rgba(59,130,246,0.08);
+      border-radius: 100px; padding: 6px 16px;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+      color: var(--accent1); text-transform: uppercase; margin-bottom: 24px;
+    }
+    .badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent1); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.4)} }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      background: linear-gradient(135deg, #fff 0%, #a0bfe0 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 16px;
+    }
+    .hero-sub {
+      max-width: 640px; margin: 0 auto 48px;
+      font-size: 1.05rem; color: var(--muted); line-height: 1.7;
+    }
+
+    /* ── PHASE TIMELINE ── */
+    .phase-nav {
+      display: flex; justify-content: center; gap: 0;
+      flex-wrap: wrap; margin-bottom: 64px; position: relative; z-index: 1;
+    }
+    .phase-pill {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 20px; border-radius: 0;
+      font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase; cursor: pointer; border: 1px solid var(--border);
+      transition: all 0.2s; text-decoration: none; color: var(--muted);
+      background: var(--bg2);
+    }
+    .phase-pill:first-child { border-radius: 12px 0 0 12px; }
+    .phase-pill:last-child  { border-radius: 0 12px 12px 0; }
+    .phase-pill:hover { background: var(--bg3); color: var(--text); }
+    .phase-pill .num {
+      width: 22px; height: 22px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 900;
+    }
+    .pill-1 .num { background: rgba(59,130,246,0.2);  color: var(--p1); }
+    .pill-2 .num { background: rgba(139,92,246,0.2);  color: var(--p2); }
+    .pill-3 .num { background: rgba(20,184,166,0.2);  color: var(--p3); }
+    .pill-4 .num { background: rgba(249,115,22,0.2);  color: var(--p4); }
+
+    /* ── MAIN LAYOUT ── */
+    .container {
+      max-width: 1200px; margin: 0 auto;
+      padding: 0 24px 120px;
+      position: relative; z-index: 1;
+    }
+
+    /* ── PHASE SECTION ── */
+    .phase-section {
+      margin-bottom: 80px;
+      scroll-margin-top: 80px;
+    }
+
+    .phase-header {
+      display: flex; align-items: flex-start; gap: 20px;
+      padding: 32px; border-radius: 20px 20px 0 0;
+      border: 1px solid var(--border); border-bottom: none;
+      margin-bottom: 0;
+    }
+    .phase-header-1 { background: linear-gradient(135deg, rgba(59,130,246,0.1) 0%, rgba(59,130,246,0.03) 100%); border-top: 3px solid var(--p1); }
+    .phase-header-2 { background: linear-gradient(135deg, rgba(139,92,246,0.1) 0%, rgba(139,92,246,0.03) 100%); border-top: 3px solid var(--p2); }
+    .phase-header-3 { background: linear-gradient(135deg, rgba(20,184,166,0.1) 0%, rgba(20,184,166,0.03) 100%); border-top: 3px solid var(--p3); }
+    .phase-header-4 { background: linear-gradient(135deg, rgba(249,115,22,0.1) 0%, rgba(249,115,22,0.03) 100%); border-top: 3px solid var(--p4); }
+
+    .phase-icon {
+      width: 56px; height: 56px; border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px; flex-shrink: 0;
+    }
+    .phase-icon-1 { background: rgba(59,130,246,0.15);  }
+    .phase-icon-2 { background: rgba(139,92,246,0.15);  }
+    .phase-icon-3 { background: rgba(20,184,166,0.15);  }
+    .phase-icon-4 { background: rgba(249,115,22,0.15);  }
+
+    .phase-num {
+      font-size: 10px; font-weight: 800; letter-spacing: 0.14em;
+      text-transform: uppercase; margin-bottom: 4px;
+    }
+    .phase-num-1 { color: var(--p1); }
+    .phase-num-2 { color: var(--p2); }
+    .phase-num-3 { color: var(--p3); }
+    .phase-num-4 { color: var(--p4); }
+
+    .phase-title {
+      font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em;
+    }
+    .phase-desc { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+
+    .phase-body {
+      border: 1px solid var(--border); border-top: none;
+      border-radius: 0 0 20px 20px;
+      background: var(--bg2);
+      overflow: hidden;
+    }
+
+    /* ── STEP CARD ── */
+    .step-list { display: flex; flex-direction: column; }
+
+    .step-card {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      border-bottom: 1px solid var(--border);
+    }
+    .step-card:last-child { border-bottom: none; }
+
+    .step-left {
+      padding: 28px 24px;
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; gap: 12px;
+      background: rgba(255,255,255,0.015);
+    }
+    .step-num-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 11px; font-weight: 800; letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .snb-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+    }
+    .phase-1-dot { background: var(--p1); box-shadow: 0 0 6px var(--p1); }
+    .phase-2-dot { background: var(--p2); box-shadow: 0 0 6px var(--p2); }
+    .phase-3-dot { background: var(--p3); box-shadow: 0 0 6px var(--p3); }
+    .phase-4-dot { background: var(--p4); box-shadow: 0 0 6px var(--p4); }
+
+    .step-name {
+      font-size: 1rem; font-weight: 700; line-height: 1.3;
+    }
+    .step-desc-left {
+      font-size: 0.82rem; color: var(--muted); line-height: 1.5;
+    }
+
+    /* ── FILE CHIPS ── */
+    .file-chips { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+    .file-chip {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px; padding: 5px 10px;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      color: var(--accent3); cursor: default; transition: all 0.15s;
+    }
+    .file-chip:hover { background: rgba(34,211,238,0.08); border-color: rgba(34,211,238,0.3); }
+    .file-chip svg { flex-shrink: 0; opacity: 0.7; }
+
+    .step-right {
+      padding: 28px 28px;
+      display: flex; flex-direction: column; gap: 20px;
+    }
+
+    /* ── EXPLANATION TEXT ── */
+    .step-explain {
+      font-size: 0.875rem; color: #c8d8e8; line-height: 1.7;
+    }
+
+    /* ── FORMULA BOX ── */
+    .formula-box {
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-left: 3px solid;
+      border-radius: 0 10px 10px 0;
+      padding: 16px 20px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .formula-label {
+      font-size: 9px; font-weight: 700; letter-spacing: 0.15em;
+      text-transform: uppercase; margin-bottom: 8px; opacity: 0.7;
+    }
+    .formula-expr {
+      font-size: 1rem; font-weight: 600;
+    }
+    .formula-legend {
+      margin-top: 10px; font-size: 10px; color: var(--muted);
+      display: flex; flex-direction: column; gap: 3px; font-family: 'Inter', sans-serif;
+    }
+    .formula-legend span::before { content: '→ '; opacity: 0.5; }
+
+    .fb-blue   { border-left-color: var(--p1); }
+    .fb-purple { border-left-color: var(--p2); }
+    .fb-teal   { border-left-color: var(--p3); }
+    .fb-orange { border-left-color: var(--p4); }
+
+    /* ── CODE SNIPPET ── */
+    .code-snippet {
+      background: #0a0f1a;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .code-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px;
+      background: rgba(255,255,255,0.04);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .code-filename {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .code-lang {
+      font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+      background: rgba(34,211,238,0.1); color: var(--accent3);
+      border-radius: 4px; padding: 2px 7px;
+    }
+    .code-body {
+      padding: 16px; overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.65;
+    }
+    .code-body pre { margin: 0; white-space: pre; }
+
+    .kw   { color: #c792ea; }
+    .fn   { color: #82aaff; }
+    .str  { color: #c3e88d; }
+    .num  { color: #f78c6c; }
+    .cmt  { color: #546e7a; font-style: italic; }
+    .var  { color: #89ddff; }
+    .cls  { color: #ffcb6b; }
+    .op   { color: #89ddff; }
+
+    /* ── STATUS PILLS ── */
+    .status-row {
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    .status-pill {
+      display: flex; align-items: center; gap: 6px;
+      border-radius: 8px; padding: 6px 12px;
+      font-size: 11px; font-weight: 600;
+    }
+    .sp-green  { background: rgba(16,185,129,0.12); color: var(--green);  border: 1px solid rgba(16,185,129,0.3); }
+    .sp-yellow { background: rgba(245,158,11,0.12); color: var(--yellow); border: 1px solid rgba(245,158,11,0.3); }
+    .sp-red    { background: rgba(244,63,94,0.12);  color: var(--red);    border: 1px solid rgba(244,63,94,0.3); }
+    .sp-icon { font-size: 14px; }
+
+    /* ── FLOW ARROWS ── */
+    .flow-divider {
+      display: flex; align-items: center; justify-content: center;
+      padding: 12px 0;
+      color: var(--muted); font-size: 20px;
+    }
+
+    /* ── SUMMARY TABLE ── */
+    .summary-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+      margin-top: 64px;
+    }
+    .summary-card {
+      border: 1px solid var(--border); border-radius: 16px;
+      padding: 24px; background: var(--bg2);
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .summary-card:hover { transform: translateY(-4px); }
+    .summary-card-1:hover { border-color: rgba(59,130,246,0.4); }
+    .summary-card-2:hover { border-color: rgba(139,92,246,0.4); }
+    .summary-card-3:hover { border-color: rgba(20,184,166,0.4); }
+    .summary-card-4:hover { border-color: rgba(249,115,22,0.4); }
+    .sc-icon { font-size: 28px; margin-bottom: 12px; }
+    .sc-title { font-weight: 700; margin-bottom: 6px; font-size: 0.95rem; }
+    .sc-body  { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center; padding: 48px 24px;
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem; color: var(--muted);
+      position: relative; z-index: 1;
+    }
+    footer strong { color: var(--text); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      .step-card { grid-template-columns: 1fr; }
+      .step-left { border-right: none; border-bottom: 1px solid var(--border); }
+      .summary-grid { grid-template-columns: repeat(2, 1fr); }
+      .phase-nav { gap: 4px; }
+      .phase-pill { border-radius: 12px !important; }
+    }
+    @media (max-width: 480px) {
+      .summary-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="hero-glow"></div>
+    <div class="badge"><span class="dot"></span>System Architecture · v2.0</div>
+    <h1>Res-Q Intelligence Pipeline</h1>
+    <p class="hero-sub">
+      A walkthrough of the 4-phase AI-powered system: from raw geospatial coordinates to
+      mission-critical response times, risk scores, and explainable output — mapped to every source file.
+    </p>
+
+    <!-- Phase nav pills -->
+    <nav class="phase-nav">
+      <a href="#phase1" class="phase-pill pill-1">
+        <span class="num">1</span> Spatial Ingestion
+      </a>
+      <a href="#phase2" class="phase-pill pill-2">
+        <span class="num">2</span> Predictive Logic
+      </a>
+      <a href="#phase3" class="phase-pill pill-3">
+        <span class="num">3</span> Risk Evaluation
+      </a>
+      <a href="#phase4" class="phase-pill pill-4">
+        <span class="num">4</span> Output &amp; XAI
+      </a>
+    </nav>
+  </header>
+
+  <main class="container">
+
+    <!-- ═══════════════════════════════════════ PHASE 1 ═══════════ -->
+    <section class="phase-section" id="phase1">
+      <div class="phase-header phase-header-1">
+        <div class="phase-icon phase-icon-1">🗺️</div>
+        <div>
+          <div class="phase-num phase-num-1">Phase 01</div>
+          <div class="phase-title">Spatial Ingestion</div>
+          <div class="phase-desc">Obtaining the "Where" — converting raw map data into structured road intelligence</div>
+        </div>
+      </div>
+      <div class="phase-body">
+        <div class="step-list">
+
+          <!-- Step 1.1 -->
+          <div class="step-card">
+            <div class="step-left">
+              <div class="step-num-badge">
+                <span class="snb-dot phase-1-dot"></span>
+                <span style="color:var(--p1)">Step 1.1</span>
+              </div>
+              <div class="step-name">Coordinate Lock &amp; Geocoding</div>
+              <div class="step-desc-left">Captures high-precision Lat/Lng from map click or address geocoding engine.</div>
+              <div class="file-chips">
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Map_Service.ts
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  app/page.tsx (Map click handler)
+                </span>
+              </div>
+            </div>
+            <div class="step-right">
+              <p class="step-explain">
+                Whether a user clicks the interactive map to report an accident or types a physical address, the system 
+                immediately locks precise coordinates. For address inputs, the <strong>MapTiler Geocoding API</strong> 
+                (biased to San Fernando, Pampanga) calculates the exact spatial point — eliminating any emergency location ambiguity.
+              </p>
+              <div class="code-snippet">
+                <div class="code-header">
+                  <span class="code-filename">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                    src/service/Map_Service.ts
+                  </span>
+                  <span class="code-lang">TypeScript</span>
+                </div>
+                <div class="code-body"><pre><span class="cmt">// Reverse geocoding: coordinates → human address</span>
+<span class="kw">export const</span> <span class="fn">getAddressFromCoordinates</span> = <span class="kw">async</span> (
+  lat: <span class="cls">number</span>, lng: <span class="cls">number</span>
+): <span class="cls">Promise</span>&lt;<span class="cls">string</span> | <span class="kw">null</span>&gt; =&gt; {
+  <span class="kw">const</span> <span class="var">response</span> = <span class="kw">await</span> <span class="fn">fetch</span>(
+    <span class="str">`${BASE_URL}/${lng},${lat}.json?key=${MAPTILER_KEY}`</span>
+  );
+  <span class="kw">const</span> <span class="var">feature</span> = data?.features?.[<span class="num">0</span>];
+  <span class="kw">return</span> feature.place_name || feature.text || <span class="kw">null</span>;
+};</pre></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 1.2 -->
+          <div class="step-card">
+            <div class="step-left">
+              <div class="step-num-badge">
+                <span class="snb-dot phase-1-dot"></span>
+                <span style="color:var(--p1)">Step 1.2</span>
+              </div>
+              <div class="step-name">KML Road Segment Proximity Scan</div>
+              <div class="step-desc-left">Perpendicular Haversine distance to KML road centerlines → Road Segment ID match.</div>
+              <div class="file-chips">
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  KML_Service.ts
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Traffic_Service.ts (distanceToLineSegmentKm)
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  models/ (VEHICLE SPEED.kml)
+                </span>
+              </div>
+            </div>
+            <div class="step-right">
+              <p class="step-explain">
+                Once coordinates are locked, the system runs a <strong>proximity scan across KML Road Models</strong>.
+                The perpendicular distance to every road centerline is computed using the Haversine formula — 
+                matching the user to a specific Road Segment ID (e.g., MacArthur Highway North).
+                Inheriting that segment's base speed, lane count, and historical congestion profile instantly.
+              </p>
+              <div class="code-snippet">
+                <div class="code-header">
+                  <span class="code-filename">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                    src/service/Traffic_Service.ts
+                  </span>
+                  <span class="code-lang">TypeScript</span>
+                </div>
+                <div class="code-body"><pre><span class="cmt">// Haversine perpendicular distance: point → road segment</span>
+<span class="kw">private static</span> <span class="fn">distanceToLineSegmentKm</span>(
+  lat, lng, lat1, lng1, lat2, lng2
+): <span class="cls">number</span> {
+  <span class="kw">const</span> R = <span class="num">6371</span>; <span class="cmt">// Earth radius km</span>
+  <span class="kw">const</span> y = <span class="cls">Math</span>.<span class="fn">sin</span>(λ - λ1) * <span class="cls">Math</span>.<span class="fn">cos</span>(φ2);
+  <span class="kw">const</span> x = <span class="cls">Math</span>.<span class="fn">cos</span>(φ1) * <span class="cls">Math</span>.<span class="fn">sin</span>(φ2) - ...;
+  <span class="kw">const</span> distanceToLine = <span class="cls">Math</span>.<span class="fn">asin</span>(
+    <span class="cls">Math</span>.<span class="fn">sin</span>(<span class="kw">this</span>.<span class="fn">haversineDistance</span>(...) / R) *
+    <span class="cls">Math</span>.<span class="fn">sin</span>(bearingRadians)
+  );
+  <span class="kw">return</span> <span class="cls">Math</span>.<span class="fn">abs</span>(distanceToLine) * R;
+}</pre></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 1.3 -->
+          <div class="step-card">
+            <div class="step-left">
+              <div class="step-num-badge">
+                <span class="snb-dot phase-1-dot"></span>
+                <span style="color:var(--p1)">Step 1.3</span>
+              </div>
+              <div class="step-name">Nominatim Reverse Geocoding &amp; Firestore Sync</div>
+              <div class="step-desc-left">Raw coordinates → localized street address synced to Firestore for dispatcher use.</div>
+              <div class="file-chips">
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Map_Service.ts (getAddressFromCoordinates)
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Incident_Service.ts (createIncidentReport)
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  src/data/firebase.ts
+                </span>
+              </div>
+            </div>
+            <div class="step-right">
+              <p class="step-explain">
+                Raw coordinates are passed through the <strong>MapTiler (OpenStreetMap) Geocoding API</strong> to produce a 
+                localized street address <em>(e.g., "Jose Abad Santos Ave, San Fernando, Pampanga")</em>.
+                This translated address — along with all incident metadata — is written directly to <strong>Firestore</strong> 
+                via <code>createIncidentReport()</code>, ensuring Admin Dashboard and Field Units see the exact same named location.
+              </p>
+              <div class="code-snippet">
+                <div class="code-header">
+                  <span class="code-filename">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                    src/service/Incident_Service.ts
+                  </span>
+                  <span class="code-lang">TypeScript</span>
+                </div>
+                <div class="code-body"><pre><span class="kw">export const</span> <span class="fn">createIncidentReport</span> = <span class="kw">async</span> (
+  input: <span class="cls">CreateIncidentInput</span>
+): <span class="cls">Promise</span>&lt;<span class="cls">string</span>&gt; =&gt; {
+  <span class="cmt">// Incident includes { location: { lat, lng, address } }</span>
+  <span class="kw">const</span> created = <span class="kw">await</span> <span class="fn">addDoc</span>(<span class="fn">collection</span>(db, INCIDENTS_COLLECTION), {
+    ...input,
+    status: <span class="str">"pending"</span>,
+    timestamp: <span class="fn">serverTimestamp</span>(), <span class="cmt">// Firestore sync</span>
+  });
+  <span class="kw">return</span> created.id;
+};</pre></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════ PHASE 2 ═══════════ -->
+    <section class="phase-section" id="phase2">
+      <div class="phase-header phase-header-2">
+        <div class="phase-icon phase-icon-2">⚙️</div>
+        <div>
+          <div class="phase-num phase-num-2">Phase 02</div>
+          <div class="phase-title">Predictive Logic</div>
+          <div class="phase-desc">The Engine Room — blending historical ML baselines with live telemetry to produce a dynamic Response Time</div>
+        </div>
+      </div>
+      <div class="phase-body">
+        <div class="step-list">
+
+          <!-- Step 2.1 -->
+          <div class="step-card">
+            <div class="step-left">
+              <div class="step-num-badge">
+                <span class="snb-dot phase-2-dot"></span>
+                <span style="color:var(--p2)">Step 2.1</span>
+              </div>
+              <div class="step-name">Base Time: Urban Speed Constant K = 2.5 min/km</div>
+              <div class="step-desc-left">Absolute baseline assuming zero traffic — accounts for turns and signal resets.</div>
+              <div class="file-chips">
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Traffic_Service.ts (K = 2.5)
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  XaiBreakdownService.ts (baselineMinutes)
+                </span>
+              </div>
+            </div>
+            <div class="step-right">
+              <p class="step-explain">
+                The first computation is the physical distance baseline. An <strong>Urban Speed Constant K of 2.5 minutes per kilometer</strong> 
+                represents the minimum possible travel time through a city grid with standard intersection delays — 
+                assuming no traffic whatsoever. This value is anchored in both the TSRE engine and the XAI breakdown service.
+              </p>
+              <div class="formula-box fb-purple">
+                <div class="formula-label">Formula 2.1 · Base Time</div>
+                <div class="formula-expr" style="color:#c792ea">Base Time = D × K</div>
+                <div class="formula-legend">
+                  <span>D = Physical distance in km</span>
+                  <span>K = 2.5 min/km (Urban Speed Constant)</span>
+                </div>
+              </div>
+              <div class="code-snippet">
+                <div class="code-header">
+                  <span class="code-filename">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                    src/service/Traffic_Service.ts · src/service/XaiBreakdownService.ts
+                  </span>
+                  <span class="code-lang">TypeScript</span>
+                </div>
+                <div class="code-body"><pre><span class="cmt">// Traffic_Service.ts — TSRE core constant</span>
+<span class="kw">const</span> K = <span class="num">2.5</span>; <span class="cmt">// min/km baseline</span>
+<span class="kw">let</span> tsreTime = distanceKm * K + avgSegmentTime + Φ + Ω;
+
+<span class="cmt">// XaiBreakdownService.ts — XAI transparency layer</span>
+<span class="kw">const</span> baselineMinutes = routeDistanceKm &gt; <span class="num">0</span>
+  ? routeDistanceKm * <span class="num">2.5</span>
+  : <span class="num">0</span>;</pre></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2.2 -->
+          <div class="step-card">
+            <div class="step-left">
+              <div class="step-num-badge">
+                <span class="snb-dot phase-2-dot"></span>
+                <span style="color:var(--p2)">Step 2.2</span>
+              </div>
+              <div class="step-name">ML Historical Baseline (Trained Segment Weights)</div>
+              <div class="step-desc-left">Time-of-day segment capacity analysis — e.g., MacArthur Highway at 60% during rush hour.</div>
+              <div class="file-chips">
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Traffic_Service.ts (getTimeMultiplier)
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  RouteThresholdTuner.ts
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  TelemetryNormalizationService.ts
+                </span>
+              </div>
+            </div>
+            <div class="step-right">
+              <p class="step-explain">
+                Before looking at live data, the system queries its <strong>ML Historical Baseline</strong> — analyzing trained weights 
+                for the specific road segment at the current hour. The <code>getTimeMultiplier()</code> encodes known rush-hour capacity:
+                MacArthur Highway at 8:00 AM returns <strong>0.6× speed</strong> (60% capacity).
+                The <code>RouteThresholdTuner</code> further self-adjusts these thresholds using historical ground truth samples.
+              </p>
+              <div class="code-snippet">
+                <div class="code-header">
+                  <span class="code-filename">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                    src/service/Traffic_Service.ts
+                  </span>
+                  <span class="code-lang">TypeScript</span>
+                </div>
+                <div class="code-body"><pre><span class="kw">private static</span> <span class="fn">getTimeMultiplier</span>(hour: <span class="cls">number</span>): <span class="cls">number</span> {
+  <span class="kw">if</span> ((hour &gt;= <span class="num">7</span> &amp;&amp; hour &lt; <span class="num">9</span>) || (hour &gt;= <span class="num">17</span> &amp;&amp; hour &lt; <span class="num">19</span>)) {
+    <span class="kw">return</span> <span class="num">0.60</span>; <span class="cmt">// Heavy rush — 60% capacity</span>
+  } <span class="kw">else if</span> (hour &gt;= <span class="num">11</span> &amp;&amp; hour &lt; <span class="num">15</span>) {
+    <span class="kw">return</span> <span class="num">0.85</span>; <span class="cmt">// Light mid-day</span>
+  } <span class="kw">else if</span> (hour &gt;= <span class="num">19</span> &amp;&amp; hour &lt; <span class="num">23</span>) {
+    <span class="kw">return</span> <span class="num">0.75</span>; <span class="cmt">// Off-peak</span>
+  }
+  <span class="kw">return</span> <span class="num">0.95</span>; <span class="cmt">// Night — near clear</span>
+}</pre></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2.3 -->
+          <div class="step-card">
+            <div class="step-left">
+              <div class="step-num-badge">
+                <span class="snb-dot phase-2-dot"></span>
+                <span style="color:var(--p2)">Step 2.3</span>
+              </div>
+              <div class="step-name">Real-Time Telemetry Data Stream</div>
+              <div class="step-desc-left">Live GPS speed data, Pagasa weather integration, and verified roadblock reports.</div>
+              <div class="file-chips">
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Traffic_Service.ts (getLiveTraffic)
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Traffic_Service.ts (getWeatherMultiplier)
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  TrafficSpeedProfileService.ts
+                </span>
+              </div>
+            </div>
+            <div class="step-right">
+              <p class="step-explain">
+                The Active Data Layer ingests live telemetry from GPS sensors and the <strong>Pagasa Weather Integration</strong>.
+                High-impact variables — heavy rain, typhoons, newly verified roadblocks — that haven't yet been reflected 
+                in historical patterns are pulled here. Weather multipliers reduce effective road speed by 15% (rain) or 50% (typhoon).
+              </p>
+              <div class="code-snippet">
+                <div class="code-header">
+                  <span class="code-filename">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                    src/service/Traffic_Service.ts
+                  </span>
+                  <span class="code-lang">TypeScript</span>
+                </div>
+                <div class="code-body"><pre><span class="kw">private static</span> <span class="fn">getWeatherMultiplier</span>(
+  condition: <span class="str">'clear'</span> | <span class="str">'rainy'</span> | <span class="str">'typhoon'</span>
+): <span class="cls">number</span> {
+  <span class="kw">return</span> {
+    clear:   <span class="num">1.00</span>, <span class="cmt">// No impact</span>
+    rainy:   <span class="num">0.85</span>, <span class="cmt">// −15% speed</span>
+    typhoon: <span class="num">0.50</span>, <span class="cmt">// −50% speed (Pagasa alert)</span>
+  }[condition];
+}
+
+<span class="cmt">// Combined live telemetry factor per road segment</span>
+<span class="kw">const</span> combinedMultiplier =
+  timeMultiplier * incidentMultiplier * weatherMultiplier;</pre></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2.4 -->
+          <div class="step-card">
+            <div class="step-left">
+              <div class="step-num-badge">
+                <span class="snb-dot phase-2-dot"></span>
+                <span style="color:var(--p2)">Step 2.4 – 2.5</span>
+              </div>
+              <div class="step-name">Delta Detection &amp; Hazard Penalty Φ</div>
+              <div class="step-desc-left">Historical vs. live divergence triggers weight re-adjustment and 50% speed penalty per verified incident.</div>
+              <div class="file-chips">
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  TelemetryDriftMonitor.ts
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Traffic_Service.ts (getIncidentCongestion)
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  XaiBreakdownService.ts (hazardPenalty)
+                </span>
+              </div>
+            </div>
+            <div class="step-right">
+              <p class="step-explain">
+                The <strong>TelemetryDriftMonitor</strong> compares the historical expectation (baseline distribution) against live telemetry 
+                using PSI (Population Stability Index) and Jensen-Shannon Divergence. When significant divergence is detected 
+                (PSI ≥ 0.25, JSD ≥ 0.06), weights are re-adjusted. A verified incident within 1 km instantly applies a 
+                <strong>50% speed reduction (Hazard Penalty Φ)</strong>. Within 1–2 km it applies a 30% reduction.
+              </p>
+              <div class="code-snippet">
+                <div class="code-header">
+                  <span class="code-filename">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                    src/service/TelemetryDriftMonitor.ts
+                  </span>
+                  <span class="code-lang">TypeScript</span>
+                </div>
+                <div class="code-body"><pre><span class="kw">private static</span> <span class="fn">classifySeverity</span>(psi, jsd, maxDelta) {
+  <span class="kw">if</span> (psi &gt;= <span class="num">0.50</span> || jsd &gt;= <span class="num">0.12</span> || maxDelta &gt;= <span class="num">0.28</span>)
+    <span class="kw">return</span> <span class="str">'high'</span>;    <span class="cmt">// Major drift — hard re-weight</span>
+  <span class="kw">if</span> (psi &gt;= <span class="num">0.25</span> || jsd &gt;= <span class="num">0.06</span> || maxDelta &gt;= <span class="num">0.18</span>)
+    <span class="kw">return</span> <span class="str">'moderate'</span>; <span class="cmt">// Significant — adjust weights</span>
+  <span class="kw">if</span> (psi &gt;= <span class="num">0.10</span> || jsd &gt;= <span class="num">0.03</span> || maxDelta &gt;= <span class="num">0.10</span>)
+    <span class="kw">return</span> <span class="str">'low'</span>;      <span class="cmt">// Minor drift — monitor only</span>
+  <span class="kw">return</span> <span class="str">'none'</span>;
+}</pre></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2.6 -->
+          <div class="step-card">
+            <div class="step-left">
+              <div class="step-num-badge">
+                <span class="snb-dot phase-2-dot"></span>
+                <span style="color:var(--p2)">Step 2.6 – 2.7</span>
+              </div>
+              <div class="step-name">TSRE Formula · Final Intelligence Synthesis</div>
+              <div class="step-desc-left">Master formula fusing all variables into a high-fidelity, anomaly-corrected response time.</div>
+              <div class="file-chips">
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Traffic_Service.ts (calculateTSRE)
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  RouteXAI_Service.ts (buildTelemetry)
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  RouteEtaBreakdownService.ts
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Traffic_Service.ts (detectAndCorrectEtaAnomaly)
+                </span>
+              </div>
+            </div>
+            <div class="step-right">
+              <p class="step-explain">
+                All variables are fused into the master <strong>TSRE Formula</strong>. Baseline distance time, weighted segment congestion 
+                (Σ Wi·Ti), hazard penalties (Φ), and weather coefficients (Ω) produce a unified total ETA.
+                An additional <strong>anomaly correction engine</strong> Winsorizes statistically impossible results 
+                (e.g., ETA/km &gt; 9.5 or ratio &gt; 3.6×) by blending with a bounded upper envelope.
+                The result is a confidence score calibrated against historical ground truth response times.
+              </p>
+              <div class="formula-box fb-purple">
+                <div class="formula-label">Formula 2.6 · TSRE Master</div>
+                <div class="formula-expr" style="color:#c792ea">T = (D × K) + Σ(Wᵢ × Tᵢ) + Φ + Ω</div>
+                <div class="formula-legend">
+                  <span>D×K = Baseline (physical distance × 2.5)</span>
+                  <span>Σ(Wᵢ×Tᵢ) = Weighted segment congestion terms</span>
+                  <span>Φ = Hazard Penalty (0.8 intersection factor)</span>
+                  <span>Ω = Weather / Signal Delay (1.2 factor)</span>
+                </div>
+              </div>
+              <div class="code-snippet">
+                <div class="code-header">
+                  <span class="code-filename">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                    src/service/Traffic_Service.ts
+                  </span>
+                  <span class="code-lang">TypeScript</span>
+                </div>
+                <div class="code-body"><pre><span class="kw">const</span> K = <span class="num">2.5</span>;          <span class="cmt">// Urban speed constant</span>
+<span class="kw">const</span> Φ = <span class="num">0.8</span>;          <span class="cmt">// Intersection delay factor</span>
+<span class="kw">const</span> Ω = <span class="num">1.2</span>;          <span class="cmt">// Signal delay factor</span>
+
+<span class="kw">let</span> tsreTime = distanceKm * K  <span class="cmt">// Base Distance Term</span>
+  + avgSegmentTime              <span class="cmt">// Σ(Wᵢ × Tᵢ)</span>
+  + Φ + Ω;                      <span class="cmt">// Hazard + Weather</span>
+
+<span class="kw">if</span> (incidentPresence) tsreTime *= <span class="num">1.1</span>; <span class="cmt">// +10% incident buffer</span>
+<span class="kw">if</span> (emergencyMode)   tsreTime *= <span class="num">0.7</span>; <span class="cmt">// −30% emergency bonus</span></pre></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════ PHASE 3 ═══════════ -->
+    <section class="phase-section" id="phase3">
+      <div class="phase-header phase-header-3">
+        <div class="phase-icon phase-icon-3">🛡️</div>
+        <div>
+          <div class="phase-num phase-num-3">Phase 03</div>
+          <div class="phase-title">Risk Evaluation</div>
+          <div class="phase-desc">Determining Safety — multivariate approach to measure environmental danger tier</div>
+        </div>
+      </div>
+      <div class="phase-body">
+        <div class="step-list">
+
+          <!-- Step 3.1 -->
+          <div class="step-card">
+            <div class="step-left">
+              <div class="step-num-badge">
+                <span class="snb-dot phase-3-dot"></span>
+                <span style="color:var(--p3)">Step 3.1</span>
+              </div>
+              <div class="step-name">Hazard Profile Audit (Historical Incident Registry)</div>
+              <div class="step-desc-left">Long-term incident registry queried for recurring accident/flood history at coordinates.</div>
+              <div class="file-chips">
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  RiskWeightTrainer.ts (getHazardFactor)
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Incident_Service.ts (subscribeToCompleteHistory)
+                </span>
+              </div>
+            </div>
+            <div class="step-right">
+              <p class="step-explain">
+                The system begins by auditing the <strong>Hazard Profile</strong> of the target coordinates.
+                The long-term incident registry (Firestore full history via <code>subscribeToCompleteHistory()</code>) 
+                is analyzed for recurring accident or flood events. A "recurring accident zone" receives a higher 
+                baseline risk score before live data is even considered.
+                Hazard factors are typed: Fire = 1.0, Flood = 0.8, Accident = 0.6, Other = 0.4.
+              </p>
+              <div class="code-snippet">
+                <div class="code-header">
+                  <span class="code-filename">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                    src/service/RiskWeightTrainer.ts
+                  </span>
+                  <span class="code-lang">TypeScript</span>
+                </div>
+                <div class="code-body"><pre><span class="kw">private static</span> <span class="fn">getHazardFactor</span>(type: <span class="cls">string</span>): <span class="cls">number</span> {
+  <span class="kw">const</span> hazardMap: <span class="cls">Record</span>&lt;<span class="cls">string</span>, <span class="cls">number</span>&gt; = {
+    fire:     <span class="num">1.0</span>, <span class="cmt">// Maximum hazard — life-threatening</span>
+    flood:    <span class="num">0.8</span>, <span class="cmt">// High — infrastructure impact</span>
+    accident: <span class="num">0.6</span>, <span class="cmt">// Moderate — traffic-blocking</span>
+    other:    <span class="num">0.4</span>, <span class="cmt">// Low — situational</span>
+  };
+  <span class="kw">return</span> hazardMap[type.toLowerCase()] || <span class="num">0.5</span>;
+}</pre></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3.2 -->
+          <div class="step-card">
+            <div class="step-left">
+              <div class="step-num-badge">
+                <span class="snb-dot phase-3-dot"></span>
+                <span style="color:var(--p3)">Step 3.2 – 3.3</span>
+              </div>
+              <div class="step-name">Velocity Variance &amp; 500m Geofence Scan</div>
+              <div class="step-desc-left">Traffic health monitoring + geofence radius scan for risk context around the pinned location.</div>
+              <div class="file-chips">
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  RouteXAI_Service.ts (spectralEnergy / entropy)
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  ProneAreaPrediction_Service.ts (haversineKm scan)
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  ConfidenceBandService.ts
+                </span>
+              </div>
+            </div>
+            <div class="step-right">
+              <p class="step-explain">
+                The system monitors <strong>traffic flow health</strong> by comparing current segment speeds against the expected velocity baseline. 
+                Anomalous slowdowns without a recorded cause signal an undetected hazard — the system automatically elevates the risk level. 
+                Simultaneously, a <strong>geofencing algorithm (500m radius Haversine scan)</strong> queries all active reports in the surrounding zone,
+                building a complete "Risk Context" — not just the pinned point, but its entire environment.
+              </p>
+              <div class="code-snippet">
+                <div class="code-header">
+                  <span class="code-filename">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                    src/service/ProneAreaPrediction_Service.ts
+                  </span>
+                  <span class="code-lang">TypeScript</span>
+                </div>
+                <div class="code-body"><pre><span class="cmt">// Geofence scan: incidents within 1.8km radius</span>
+<span class="kw">const</span> nearIncidents = incidents.<span class="fn">filter</span>((inc) =&gt; {
+  <span class="kw">const</span> d = <span class="fn">haversineKm</span>(
+    lat, lng,
+    inc.location.lat, inc.location.lng
+  );
+  <span class="kw">return</span> d &lt;= <span class="num">1.8</span>; <span class="cmt">// 1.8 km spatial radius</span>
+});
+
+<span class="cmt">// Spectral congestion energy in RouteXAI_Service</span>
+<span class="kw">function</span> <span class="fn">spectralEnergy</span>(weights: <span class="cls">number</span>[]): <span class="cls">number</span> {
+  <span class="cmt">// DFT-like signal to detect alternating congestion stress</span>
+  <span class="kw">for</span> (<span class="kw">let</span> k = <span class="num">1</span>; k &lt;= Math.<span class="fn">min</span>(<span class="num">4</span>, N - <span class="num">1</span>); k++) { ... }
+}</pre></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3.4 -->
+          <div class="step-card">
+            <div class="step-left">
+              <div class="step-num-badge">
+                <span class="snb-dot phase-3-dot"></span>
+                <span style="color:var(--p3)">Step 3.4</span>
+              </div>
+              <div class="step-name">DBSCAN Critical Hotspot Trigger (≥4 Incidents / 500m)</div>
+              <div class="step-desc-left">Spatial cluster detection signals coordinated major response — not random isolated events.</div>
+              <div class="file-chips">
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  components/Admin/MLInsightsView.tsx
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  app/intelligence/page.tsx (DBSCAN module)
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  ProneAreaPrediction_Service.ts
+                </span>
+              </div>
+            </div>
+            <div class="step-right">
+              <p class="step-explain">
+                If the spatial scan detects <strong>4 or more individual incidents within the 500m zone</strong>, 
+                the <strong>DBSCAN Algorithm</strong> triggers a Critical Hotspot Alert. This tells the operator the situation 
+                is not a series of random, isolated incidents — it's a structured cluster requiring a coordinated major response.
+                The alert is surfaced in the Intelligence page and the ML Insights panel.
+              </p>
+              <div class="code-snippet">
+                <div class="code-header">
+                  <span class="code-filename">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                    components/Admin/MLInsightsView.tsx · app/intelligence/page.tsx
+                  </span>
+                  <span class="code-lang">TypeScript / JSX</span>
+                </div>
+                <div class="code-body"><pre><span class="cmt">// MLInsightsView — DBSCAN hotspot formula display</span>
+formula: <span class="str">"Alert = R-Score &gt; 7.0 ∧ DBSCAN cluster detected"</span>,
+
+<span class="cmt">// intelligence/page — Module 2: Prone Area Intelligence</span>
+&lt;<span class="cls">MLBadge</span> size=<span class="str">"sm"</span> variant=<span class="str">"solid"</span> label=<span class="str">"DBSCAN"</span> /&gt;
+
+<span class="cmt">// ProneAreaPrediction threshold trigger:</span>
+<span class="kw">const</span> incidentPressure = <span class="cls">Math</span>.<span class="fn">min</span>(<span class="num">1</span>,
+  (nearIncidents.length * <span class="num">0.18</span>) + (severityBoost * <span class="num">0.08</span>)
+); <span class="cmt">// 4+ incidents = pressure &gt; 0.72 → Critical</span></pre></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3.5 -->
+          <div class="step-card">
+            <div class="step-left">
+              <div class="step-num-badge">
+                <span class="snb-dot phase-3-dot"></span>
+                <span style="color:var(--p3)">Step 3.5</span>
+              </div>
+              <div class="step-name">Multivariate R-Score Formula (1–10 Scale)</div>
+              <div class="step-desc-left">Blends historical weight, active severity, and velocity variance into a normalized risk score.</div>
+              <div class="file-chips">
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  RiskWeightTrainer.ts (calculateRScore)
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  FeatureImportanceReportService.ts
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  XaiBreakdownService.ts (proneAreaSeverityIndex)
+                </span>
+              </div>
+            </div>
+            <div class="step-right">
+              <p class="step-explain">
+                All risk indicators are fused by the <strong>Multivariate R-Score Formula</strong>. 
+                Historical hazard weight (α·H), current severity of nearby reports (β·S), and speed variance (γ/V) 
+                are blended and normalized into a clean 1–10 scale.
+                The weights (α, β, γ) are <em>trained</em> through linear regression on historical incident data 
+                via the <code>RiskWeightTrainer</code>, giving the model a self-improving edge.
+              </p>
+              <div class="formula-box fb-teal">
+                <div class="formula-label">Formula 3.5 · Risk Score</div>
+                <div class="formula-expr" style="color:#2dd4bf">R = (α·H + β·S + γ/V) / N</div>
+                <div class="formula-legend">
+                  <span>α = Hazard factor weight (default 0.40)</span>
+                  <span>β = Segment congestion weight (default 0.35)</span>
+                  <span>γ = Response time weight / inverse velocity (default 0.25)</span>
+                  <span>N = Normalization — scales output to 1–10</span>
+                </div>
+              </div>
+              <div class="code-snippet">
+                <div class="code-header">
+                  <span class="code-filename">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                    src/service/RiskWeightTrainer.ts
+                  </span>
+                  <span class="code-lang">TypeScript</span>
+                </div>
+                <div class="code-body"><pre><span class="kw">static</span> <span class="fn">calculateRScore</span>(
+  hazardFactor, segmentCongestion,
+  responseTimeMin, weights: <span class="cls">OptimizedWeights</span>
+): <span class="cls">number</span> {
+  <span class="kw">const</span> { alpha, beta, gamma } = weights;
+  <span class="cmt">// γ inverse: faster response → lower risk contribution</span>
+  <span class="kw">const</span> rtInv = gamma / (responseTimeMin + <span class="num">0.1</span>);
+
+  <span class="kw">const</span> rawScore = alpha * hazardFactor
+                 + beta  * segmentCongestion
+                 + rtInv;
+  <span class="kw">const</span> normalized = rawScore / (alpha + beta + gamma);
+  <span class="kw">return</span> <span class="cls">Math</span>.<span class="fn">min</span>(<span class="num">10</span>, <span class="cls">Math</span>.<span class="fn">max</span>(<span class="num">0</span>, normalized * <span class="num">10</span>));
+}</pre></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════ PHASE 4 ═══════════ -->
+    <section class="phase-section" id="phase4">
+      <div class="phase-header phase-header-4">
+        <div class="phase-icon phase-icon-4">📡</div>
+        <div>
+          <div class="phase-num phase-num-4">Phase 04</div>
+          <div class="phase-title">Output &amp; XAI</div>
+          <div class="phase-desc">The Communication Layer — translating complex AI processing into actionable intelligence for human operators</div>
+        </div>
+      </div>
+      <div class="phase-body">
+        <div class="step-list">
+
+          <!-- Step 4.1 -->
+          <div class="step-card">
+            <div class="step-left">
+              <div class="step-num-badge">
+                <span class="snb-dot phase-4-dot"></span>
+                <span style="color:var(--p4)">Step 4.1</span>
+              </div>
+              <div class="step-name">Risk Score → Map Color Tier Visualization</div>
+              <div class="step-desc-left">1–10 R-Score instantly converted into Emerald / Amber / Rose map layers for command overview.</div>
+              <div class="file-chips">
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  app/page.tsx (map color rendering)
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  components/Admin/MLInsightsView.tsx
+                </span>
+              </div>
+            </div>
+            <div class="step-right">
+              <p class="step-explain">
+                The raw 1–10 R-Score is instantly converted into <strong>high-visibility map color tiers</strong> — 
+                allowing a commander to understand city-wide risk at a single glance.
+                Traffic flow is simultaneously rendered as live-colored polylines on the interactive map 
+                (fluid = green/blue, moderate = amber, heavy = red).
+              </p>
+              <div class="status-row">
+                <div class="status-pill sp-green"><span class="sp-icon">🟢</span> Emerald — Safe / Low Risk (R 1–3)</div>
+                <div class="status-pill sp-yellow"><span class="sp-icon">🟡</span> Amber — Moderate / Watch (R 4–6)</div>
+                <div class="status-pill sp-red"><span class="sp-icon">🔴</span> Rose — Critical / Active Hazard (R 7–10)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 4.2 -->
+          <div class="step-card">
+            <div class="step-left">
+              <div class="step-num-badge">
+                <span class="snb-dot phase-4-dot"></span>
+                <span style="color:var(--p4)">Step 4.2</span>
+              </div>
+              <div class="step-name">SITREP Auto-Generation (Compressed Telemetry)</div>
+              <div class="step-desc-left">Raw telemetry compressed into structured situational report — ready for dispatcher handoff.</div>
+              <div class="file-chips">
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  AI_Service.ts (SITREP generation)
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Email_Service.ts (report dispatch)
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Excel_Service.ts (incident export)
+                </span>
+              </div>
+            </div>
+            <div class="step-right">
+              <p class="step-explain">
+                Dozens of speed readings, incident logs, and weather spikes are <strong>compressed into a structured SITREP</strong>.
+                The <code>AI_Service</code> synthesizes a concise situational report — e.g., 
+                <em>"High-congestion detected on MacArthur North due to combined Flood + 2 Verified Incidents."</em>
+                Reports can be dispatched via the <code>Email_Service</code> or exported to Excel for operational records.
+              </p>
+              <div class="formula-box fb-orange">
+                <div class="formula-label">SITREP Output Structure</div>
+                <div class="formula-expr" style="color:#fb923c; font-size:0.85rem">
+                  Location · R-Score · Active Incidents · ETA · Weather Flag
+                </div>
+                <div class="formula-legend">
+                  <span>Synthesized by AI_Service from all phase outputs</span>
+                  <span>Dispatched via Email_Service to field units</span>
+                  <span>Archived to Firestore + Excel_Service export</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 4.3 -->
+          <div class="step-card">
+            <div class="step-left">
+              <div class="step-num-badge">
+                <span class="snb-dot phase-4-dot"></span>
+                <span style="color:var(--p4)">Step 4.3</span>
+              </div>
+              <div class="step-name">Explainable AI (XAI) — "View ML Proof"</div>
+              <div class="step-desc-left">Every calculation includes a full logic breakdown of contributing factors — no black box.</div>
+              <div class="file-chips">
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  XaiBreakdownService.ts (buildRouteState)
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  FeatureImportanceReportService.ts
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  RouteXAI_Service.ts (formulas object)
+                </span>
+              </div>
+            </div>
+            <div class="step-right">
+              <p class="step-explain">
+                Every calculation is accompanied by a <strong>Logic Breakdown</strong> — the "why" behind the numbers.
+                If a route shows a 15-minute delay, the user clicks "View ML Proof" to see exact factor contributions 
+                (e.g., +6 mins Flood Impact, +4 mins Intersection Volume). 
+                The <code>XaiBreakdownService</code> exposes baseline, congestion penalty, hazard penalty, topology penalty, 
+                and synthetic reliability — all labeled and enumerated for the dispatcher.
+              </p>
+              <div class="code-snippet">
+                <div class="code-header">
+                  <span class="code-filename">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                    src/service/XaiBreakdownService.ts
+                  </span>
+                  <span class="code-lang">TypeScript</span>
+                </div>
+                <div class="code-body"><pre><span class="kw">return</span> {
+  baselineMinutes,           <span class="cmt">// D × 2.5 min/km</span>
+  congestionPenalty,         <span class="cmt">// low:1.4 / mod:4.1 / heavy:8.3 mins</span>
+  hazardPenalty,             <span class="cmt">// +5.4 mins if active incident</span>
+  topologyPenalty,           <span class="cmt">// friction × curvature ÷ distance</span>
+  syntheticReliability,      <span class="cmt">// 0–1 confidence index</span>
+  resolvedEtaMinutes,        <span class="cmt">// Final ETA (anomaly-corrected)</span>
+  <span class="cmt">// XAI formulas embedded in RouteXAI_Service:</span>
+  formulas: {
+    eta:     <span class="str">'T = sum_i(d_i/v_i) + urban_delay + turn_penalty'</span>,
+    friction:<span class="str">'F = sum_i(d_i*(w_i + 0.35*κ_i))'</span>,
+    entropy: <span class="str">'H = -sum_j(p_j*log₂(p_j))'</span>,
+    spectral:<span class="str">'E = sum_k(|DFT_k(w)|²/N), k=1..4'</span>,
+  }
+};</pre></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 4.4 -->
+          <div class="step-card">
+            <div class="step-left">
+              <div class="step-num-badge">
+                <span class="snb-dot phase-4-dot"></span>
+                <span style="color:var(--p4)">Step 4.4</span>
+              </div>
+              <div class="step-name">Unified Intelligence Packet — Command Picture</div>
+              <div class="step-desc-left">Response Time + Risk Score + Map Visualization delivered as a single command-ready packet.</div>
+              <div class="file-chips">
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  ConfidenceBandService.ts
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  components/Admin/MLInsightsView.tsx
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  app/intelligence/page.tsx
+                </span>
+                <span class="file-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  app/page.tsx (Main dashboard)
+                </span>
+              </div>
+            </div>
+            <div class="step-right">
+              <p class="step-explain">
+                The final output is delivered as a <strong>Unified Intelligence Packet</strong> — a single, synchronized view combining 
+                the high-fidelity ETA, the R-Score risk tier, the live map visualization, and the confidence band 
+                (best-case / worst-case envelope). This gives the dispatcher a complete <em>"Command Picture"</em>
+                — a system that has reprocessed both history and reality into a single trusted truth.
+              </p>
+              <div class="code-snippet">
+                <div class="code-header">
+                  <span class="code-filename">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                    Unified Intelligence Packet · Final Output
+                  </span>
+                  <span class="code-lang">JSON</span>
+                </div>
+                <div class="code-body"><pre>{
+  <span class="str">"eta"</span>: {
+    <span class="str">"estimatedMinutes"</span>: <span class="num">14</span>,
+    <span class="str">"confidence"</span>: <span class="num">87</span>,          <span class="cmt">// % calibrated from ground truth</span>
+    <span class="str">"anomaly"</span>: { <span class="str">"detected"</span>: <span class="kw">false</span> }
+  },
+  <span class="str">"risk"</span>: {
+    <span class="str">"rScore"</span>: <span class="num">7.4</span>,              <span class="cmt">// 1–10 multivariate R-Score</span>
+    <span class="str">"tier"</span>: <span class="str">"rose"</span>,             <span class="cmt">// map color: Critical</span>
+    <span class="str">"dbscanCluster"</span>: <span class="kw">true</span>      <span class="cmt">// hotspot detected</span>
+  },
+  <span class="str">"xai"</span>: {
+    <span class="str">"baseline"</span>: <span class="num">4.2</span>,           <span class="cmt">// mins from D×K</span>
+    <span class="str">"congestionPenalty"</span>: <span class="num">8.3</span>, <span class="cmt">// heavy traffic</span>
+    <span class="str">"hazardPenalty"</span>: <span class="num">5.4</span>,    <span class="cmt">// incident verified</span>
+    <span class="str">"reliability"</span>: <span class="num">0.72</span>      <span class="cmt">// friction-normalized</span>
+  }
+}</pre></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════ SUMMARY GRID ═══════ -->
+    <div class="summary-grid">
+      <div class="summary-card summary-card-1">
+        <div class="sc-icon">🗺️</div>
+        <div class="sc-title" style="color:var(--p1)">Phase 1 · Spatial Ingestion</div>
+        <div class="sc-body">
+          <strong>3 Steps</strong> · Map_Service, KML_Service, Incident_Service<br><br>
+          Locks coordinates → KML proximity scan (Haversine) → Nominatim address → Firestore sync
+        </div>
+      </div>
+      <div class="summary-card summary-card-2">
+        <div class="sc-icon">⚙️</div>
+        <div class="sc-title" style="color:var(--p2)">Phase 2 · Predictive Logic</div>
+        <div class="sc-body">
+          <strong>7 Steps</strong> · Traffic_Service, RouteXAI_Service, TelemetryDriftMonitor<br><br>
+          K=2.5 baseline → Historical ML weights → Live telemetry → Delta → TSRE formula → Anomaly correction
+        </div>
+      </div>
+      <div class="summary-card summary-card-3">
+        <div class="sc-icon">🛡️</div>
+        <div class="sc-title" style="color:var(--p3)">Phase 3 · Risk Evaluation</div>
+        <div class="sc-body">
+          <strong>5 Steps</strong> · RiskWeightTrainer, ProneAreaPredictionService, FeatureImportanceReportService<br><br>
+          Hazard profile → Velocity variance → 500m geofence → DBSCAN → R-Score (α·H + β·S + γ/V) / N
+        </div>
+      </div>
+      <div class="summary-card summary-card-4">
+        <div class="sc-icon">📡</div>
+        <div class="sc-title" style="color:var(--p4)">Phase 4 · Output &amp; XAI</div>
+        <div class="sc-body">
+          <strong>4 Steps</strong> · XaiBreakdownService, AI_Service, ConfidenceBandService<br><br>
+          Color tiers → SITREP → XAI proof → Unified command picture (ETA + R-Score + map)
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    <p>Res-Q System Architecture Documentation &nbsp;·&nbsp; <strong>San Fernando, Pampanga</strong> Emergency Intelligence Platform</p>
+    <p style="margin-top:8px">Generated from live codebase: <code style="font-family:'JetBrains Mono',monospace;font-size:11px;opacity:0.7">/var/www/html/rest_q_web/src/service/</code></p>
+  </footer>
+
+</body>
+</html>
